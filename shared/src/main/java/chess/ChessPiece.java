@@ -129,6 +129,35 @@ public class ChessPiece {
     }
 
     private void getHorizontalVerticalMoves(ChessBoard board, ChessPosition myPosition, Collection<ChessMove> possibleMoves, int row, int col) {
+        int[] options = {1, -1};
 
+        for (int o = 0; o < 2; o++) {
+            int r = row + options[o];
+            while (1 <= r && r <= 8 && 1 <= col && col <= 8) {
+                ChessPosition possiblePosition = new ChessPosition(r, col);
+                ChessPiece otherPiece = board.getPiece(possiblePosition);
+                if (otherPiece == null) {
+                    possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                } else if (otherPiece.getTeamColor() != pieceColor) {
+                    possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                    break;
+                }
+                r += options[o];
+            }
+        }
+        for (int o = 0; o < 2; o++) {
+            int c = col + options[o];
+            while (1 <= row && row <= 8 && 1 <= c && c <= 8) {
+                ChessPosition possiblePosition = new ChessPosition(row, c);
+                ChessPiece otherPiece = board.getPiece(possiblePosition);
+                if (otherPiece == null) {
+                    possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                } else if (otherPiece.getTeamColor() != pieceColor) {
+                    possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                    break;
+                }
+                c += options[o];
+            }
+        }
     }
 }
