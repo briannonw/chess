@@ -97,6 +97,22 @@ public class ChessPiece {
         } else if (type == PieceType.BISHOP) {
             getDiagonalMoves(board, myPosition, possibleMoves, row, col);
         } else if (type == PieceType.KNIGHT) {
+            int[] rowOptions = {1, 1, -1, -1, 2, 2, -2, -2};
+            int[] colOptions = {2, -2, 2, -2, 1, -1, 1, -1};
+
+            for (int o = 0; o < 8; o++) {
+                int r = row + rowOptions[o];
+                int c = col + colOptions[o];
+                if (1 <= r && r <= 8 && 1 <= c && c <= 8) {
+                    ChessPosition possiblePosition = new ChessPosition(r, c);
+                    ChessPiece otherPiece = board.getPiece(possiblePosition);
+                    if (otherPiece == null) {
+                        possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                    } else if (otherPiece.getTeamColor() != pieceColor) {
+                        possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                    }
+                }
+            }
 
         } else if (type == PieceType.ROOK) {
             getHorizontalVerticalMoves(board, myPosition, possibleMoves, row, col);
