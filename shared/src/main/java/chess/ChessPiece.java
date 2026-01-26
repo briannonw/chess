@@ -117,6 +117,7 @@ public class ChessPiece {
         } else if (type == PieceType.ROOK) {
             getHorizontalVerticalMoves(board, myPosition, possibleMoves, row, col);
         } else if (type == PieceType.PAWN) {
+            // Change promotion piece part from null to ?
             if (pieceColor == ChessGame.TeamColor.BLACK) {
                 if (row > 1) {
                     row--;
