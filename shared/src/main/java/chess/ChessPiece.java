@@ -92,17 +92,43 @@ public class ChessPiece {
                 }
             }
         } else if (type == PieceType.QUEEN) {
-
+            getDiagonalMoves(board, myPosition, possibleMoves, row, col);
+            getHorizontalVerticalMoves(board, myPosition, possibleMoves, row, col);
         } else if (type == PieceType.BISHOP) {
-
+            getDiagonalMoves(board, myPosition, possibleMoves, row, col);
         } else if (type == PieceType.KNIGHT) {
 
         } else if (type == PieceType.ROOK) {
-
+            getHorizontalVerticalMoves(board, myPosition, possibleMoves, row, col);
         } else if (type == PieceType.PAWN) {
 
         }
-        // possibleMoves.add(new ChessMove(myPosition, possiblePosition));
         return possibleMoves;
+    }
+
+    private void getDiagonalMoves(ChessBoard board, ChessPosition myPosition, Collection<ChessMove> possibleMoves, int row, int col) {
+        int[] rowOptions = {1, 1, -1, -1};
+        int[] colOptions = {1, -1, 1, -1};
+
+        for (int o = 0; o < 4; o++) {
+            int r = row + rowOptions[o];
+            int c = col + colOptions[o];
+            while (1 <= r && r <= 8 && 1 <= c && c <= 8) {
+                ChessPosition possiblePosition = new ChessPosition(r, c);
+                ChessPiece otherPiece = board.getPiece(possiblePosition);
+                if (otherPiece == null) {
+                    possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                } else if (otherPiece.getTeamColor() != pieceColor) {
+                    possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+                    break;
+                }
+                r += rowOptions[o];
+                c += colOptions[o];
+            }
+        }
+    }
+
+    private void getHorizontalVerticalMoves(ChessBoard board, ChessPosition myPosition, Collection<ChessMove> possibleMoves, int row, int col) {
+
     }
 }
