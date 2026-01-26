@@ -28,12 +28,6 @@ public class ChessPosition {
     private final int col;
 
     public ChessPosition(int row, int col) {
-        if (1 > row || row > 8) {
-            throw new IllegalArgumentException("Not valid board position");
-        }
-        if (1 > col || col > 8) {
-            throw new IllegalArgumentException("Not valid board position");
-        }
         this.row = row;
         this.col = col;
     }
