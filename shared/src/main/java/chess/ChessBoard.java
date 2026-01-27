@@ -68,25 +68,21 @@ public class ChessBoard {
             addPiece(new ChessPosition(7, col), new ChessPiece(ChessGame.TeamColor.BLACK, ChessPiece.PieceType.PAWN));
         }
 
-//        int[] direction = {1, -1};
-//        int[] fbrow = {1, 8};
-//        int[] column = {1, 8};
-//        ChessGame.TeamColor[] colors = {
-//                ChessGame.TeamColor.WHITE,
-//                ChessGame.TeamColor.BLACK
-//        };
-//        for (int d = 0; d < 2; d++) {
-//            int col = column[d];
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.ROOK));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.KNIGHT));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.BISHOP));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.QUEEN));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.KING));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.BISHOP));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.KNIGHT));
-//            addPiece(new ChessPosition(fbrow[d], col), new ChessPiece(colors[d], ChessPiece.PieceType.ROOK));
-//            col += direction[d];
-//        }
+        ChessPiece.PieceType[] endRows = {
+                ChessPiece.PieceType.ROOK,
+                ChessPiece.PieceType.KNIGHT,
+                ChessPiece.PieceType.BISHOP,
+                ChessPiece.PieceType.QUEEN,
+                ChessPiece.PieceType.KING,
+                ChessPiece.PieceType.BISHOP,
+                ChessPiece.PieceType.KNIGHT,
+                ChessPiece.PieceType.ROOK
+        };
+
+        for ( int col = 0; col < 8; col++) {
+            addPiece(new ChessPosition(1, col + 1), new ChessPiece(ChessGame.TeamColor.WHITE, endRows[col]));
+            addPiece(new ChessPosition(8, col + 1), new ChessPiece(ChessGame.TeamColor.BLACK, endRows[col]));
+        }
 
     }
 }
