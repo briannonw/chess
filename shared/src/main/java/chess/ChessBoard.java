@@ -38,7 +38,7 @@ public class ChessBoard {
      * @param piece    the piece to add
      */
     public void addPiece(ChessPosition position, ChessPiece piece) {
-        int row = position.getRow() -1;
+        int row = position.getRow() - 1;
         int col = position.getColumn() - 1;
         board[row][col] = piece;
     }
@@ -51,7 +51,7 @@ public class ChessBoard {
      * position
      */
     public ChessPiece getPiece(ChessPosition position) {
-        int row = position.getRow() -1;
+        int row = position.getRow() - 1;
         int col = position.getColumn() - 1;
         return board[row][col];
     }
@@ -62,11 +62,6 @@ public class ChessBoard {
      */
     public void resetBoard() {
         board = new ChessPiece[8][8];
-
-        for (int col = 1; col <= 8; col++) {
-            addPiece(new ChessPosition(2, col), new ChessPiece(ChessGame.TeamColor.WHITE, ChessPiece.PieceType.PAWN));
-            addPiece(new ChessPosition(7, col), new ChessPiece(ChessGame.TeamColor.BLACK, ChessPiece.PieceType.PAWN));
-        }
 
         ChessPiece.PieceType[] endRows = {
                 ChessPiece.PieceType.ROOK,
@@ -79,10 +74,11 @@ public class ChessBoard {
                 ChessPiece.PieceType.ROOK
         };
 
-        for ( int col = 0; col < 8; col++) {
-            addPiece(new ChessPosition(1, col + 1), new ChessPiece(ChessGame.TeamColor.WHITE, endRows[col]));
-            addPiece(new ChessPosition(8, col + 1), new ChessPiece(ChessGame.TeamColor.BLACK, endRows[col]));
+        for (int c = 0; c < 8; c++) {
+            addPiece(new ChessPosition(1, c + 1), new ChessPiece(ChessGame.TeamColor.WHITE, endRows[c]));
+            addPiece(new ChessPosition(8, c + 1), new ChessPiece(ChessGame.TeamColor.BLACK, endRows[c]));
+            addPiece(new ChessPosition(2, c + 1), new ChessPiece(ChessGame.TeamColor.WHITE, ChessPiece.PieceType.PAWN));
+            addPiece(new ChessPosition(7, c + 1), new ChessPiece(ChessGame.TeamColor.BLACK, ChessPiece.PieceType.PAWN));
         }
-
     }
 }
