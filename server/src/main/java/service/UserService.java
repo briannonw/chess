@@ -4,6 +4,9 @@ import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import model.*;
 
+import javax.xml.crypto.Data;
+import java.util.UUID;
+
 public class UserService {
     private final DataAccess dataAccess;
 
@@ -14,11 +17,22 @@ public class UserService {
     public RegisterResult register(RegisterRequest registerRequest) throws DataAccessException {
         UserData user = new UserData(registerRequest.username(), registerRequest.password(), registerRequest.email());
         dataAccess.createUser(user);
-
+        String authToken = UUID.randomUUID().toString();
+        dataAccess.createAuth(new AuthData(authToken, user.username()));
+        return new RegisterResult(user.username(), authToken);
     }
 
-    public LoginResult login(LoginRequest loginRequest) {
-
+    public LoginResult login(LoginRequest loginRequest) throws DataAccessException {
+        UserData user = dataAccess.getUser(loginRequest.username());
+        if (user == null) {
+            throw new DataAccessException("User doesn't exist");
+        }
+        if (!user.password().equals(loginRequest.password())) {
+            throw new DataAccessException("Passwords don't match");
+        }
+        String authToken = UUID.randomUUID().toString();
+        dataAccess.createAuth(new AuthData(authToken, user.username()));
+        return new LoginResult(user.username(), authToken);
     }
 
     public void logout(LogoutRequest logoutRequest) {
