@@ -4,7 +4,6 @@ import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import model.*;
 
-import javax.xml.crypto.Data;
 import java.util.UUID;
 
 public class UserService {
@@ -35,7 +34,11 @@ public class UserService {
         return new LoginResult(user.username(), authToken);
     }
 
-    public void logout(LogoutRequest logoutRequest) {
-
+    public void logout(LogoutRequest logoutRequest) throws DataAccessException {
+        AuthData auth = dataAccess.getAuth(logoutRequest.authToken());
+        if (auth == null) {
+            throw new DataAccessException("Unauthorized");
+        }
+        dataAccess.deleteAuth(logoutRequest.authToken());
     }
 }
