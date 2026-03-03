@@ -1,18 +1,22 @@
 package server;
 
-import dataaccess.DataAccess;
+import com.google.gson.Gson;
 import dataaccess.DataAccessException;
 import dataaccess.MemoryDataAccess;
 import io.javalin.*;
 import io.javalin.http.Context;
 import service.*;
+import model.*;
 
 import java.util.Map;
 
 public class Server {
 
     private final Javalin javalin;
-    private final ClearService cService = new ClearService(new MemoryDataAccess());
+    private final MemoryDataAccess dataAccess = new MemoryDataAccess();
+    private final ClearService clearService = new ClearService(dataAccess);
+    private final UserService userService = new UserService(dataAccess);
+    private final GameService gameService = new GameService(dataAccess);
 
     public Server() {
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
@@ -53,34 +57,61 @@ public class Server {
                 break;
             default:
                 ctx.status(500);
-                message = "Error: " + message;
                 break;
         }
 
-        ctx.json(Map.of("message", message));
+        ctx.json(Map.of("message","Error: " + message));
     }
 
     private void register(Context ctx) throws DataAccessException {
-        // register
+        RegisterRequest request = new Gson().fromJson(ctx.body(), RegisterRequest.class);
+        RegisterResult result = userService.register(request);
+        ctx.status(200);
+        ctx.json(result);
     }
 
     private void login(Context ctx) throws DataAccessException {
-        // login
+        LoginRequest request = new Gson().fromJson(ctx.body(), LoginRequest.class);
+        LoginResult result = userService.login(request);
+        ctx.status(200);
+        ctx.json(result);
     }
+
     private void logout(Context ctx) throws DataAccessException {
-        // logout
+        String authToken = ctx.header("authorization");
+        LogoutRequest request = new LogoutRequest(authToken);
+        userService.logout(request);
+        ctx.status(200);
+        ctx.json(Map.of());
     }
     private void listGames(Context ctx) throws DataAccessException {
-        // listGames
+        String authToken = ctx.header("authorization");
+        ListGamesRequest request = new ListGamesRequest(authToken);
+        ListGamesResult result = gameService.listGames(request);
+        ctx.status(200);
+        ctx.json(result);
     }
+
     private void createGame(Context ctx) throws DataAccessException {
-        // createGame
+        String authToken = ctx.header("authorization");
+        CreateGameRequest body = new Gson().fromJson(ctx.body(), CreateGameRequest.class);
+        CreateGameRequest request = new CreateGameRequest(authToken, body.gameName());
+        CreateGameResult result = gameService.createGame(request);
+        ctx.status(200);
+        ctx.json(result);
     }
+
     private void joinGame(Context ctx) throws DataAccessException {
-        // joinGame
+        String authToken = ctx.header("authorization");
+        JoinGameRequest body = new Gson().fromJson(ctx.body(), JoinGameRequest.class);
+        JoinGameRequest request = new JoinGameRequest(authToken, body.playerColor(), body.gameID());
+        gameService.joinGame(request);
+        ctx.status(200);
+        ctx.json(Map.of());
     }
+
     private void clear(Context ctx) throws DataAccessException {
-        cService.clear();
+        clearService.clear();
         ctx.status(200);
         ctx.json(Map.of());
     }

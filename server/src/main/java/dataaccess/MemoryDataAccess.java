@@ -19,7 +19,7 @@ public class MemoryDataAccess implements DataAccess {
 
     public void createUser(UserData user) throws DataAccessException {
         if (users.containsKey(user.username())) {
-            throw new DataAccessException("Username already exists");
+            throw new DataAccessException("Already taken");
         }
         users.put(user.username(), user);
     }
@@ -30,7 +30,7 @@ public class MemoryDataAccess implements DataAccess {
 
     public void createGame(GameData game) throws DataAccessException {
         if (games.containsKey(game.gameID())) {
-            throw new DataAccessException("Game already exists");
+            throw new DataAccessException("Bad request");
         }
         games.put(game.gameID(), game);
     }
@@ -45,7 +45,7 @@ public class MemoryDataAccess implements DataAccess {
 
     public void updateGame(GameData game) throws DataAccessException {
         if (!games.containsKey(game.gameID())) {
-            throw new DataAccessException("Game doesn't exist");
+            throw new DataAccessException("Bad request");
         }
         games.put(game.gameID(), game);
     }

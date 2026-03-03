@@ -14,6 +14,9 @@ public class UserService {
     }
 
     public RegisterResult register(RegisterRequest registerRequest) throws DataAccessException {
+        if (registerRequest.username() == null || registerRequest.password() == null || registerRequest.email() == null || registerRequest.username().isBlank() || registerRequest.password().isBlank() || registerRequest.email().isBlank()) {
+            throw new DataAccessException("Bad request");
+        }
         UserData user = new UserData(registerRequest.username(), registerRequest.password(), registerRequest.email());
         dataAccess.createUser(user);
         String authToken = UUID.randomUUID().toString();
@@ -22,12 +25,12 @@ public class UserService {
     }
 
     public LoginResult login(LoginRequest loginRequest) throws DataAccessException {
-        UserData user = dataAccess.getUser(loginRequest.username());
-        if (user == null) {
-            throw new DataAccessException("User doesn't exist");
+        if (loginRequest.username() == null || loginRequest.username().isBlank() || loginRequest.password() == null || loginRequest.password().isBlank()) {
+            throw new DataAccessException("Bad request");
         }
-        if (!user.password().equals(loginRequest.password())) {
-            throw new DataAccessException("Passwords don't match");
+        UserData user = dataAccess.getUser(loginRequest.username());
+        if (user == null || !user.password().equals(loginRequest.password())) {
+            throw new DataAccessException("Unauthorized");
         }
         String authToken = UUID.randomUUID().toString();
         dataAccess.createAuth(new AuthData(authToken, user.username()));
