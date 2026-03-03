@@ -99,15 +99,19 @@ public class ChessPiece {
                 if (!(possibleRow == 0 && possibleCol == 0)) {
                     if (1 <= possibleRow && possibleRow <= 8 && 1 <= possibleCol && possibleCol <= 8) {
                         ChessPiece otherPiece = board.getPiece(possiblePosition);
-                        if (otherPiece == null) {
-                            possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
-                        } else {
-                            if (otherPiece.pieceColor != pieceColor) {
-                                possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
-                            }
-                        }
+                        addPieces(otherPiece, possibleMoves, myPosition, possiblePosition);
                     }
                 }
+            }
+        }
+    }
+
+    private void addPieces(ChessPiece otherPiece, Collection<ChessMove> possibleMoves, ChessPosition myPosition, ChessPosition possiblePosition) {
+        if (otherPiece == null) {
+            possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
+        } else {
+            if (otherPiece.pieceColor != pieceColor) {
+                possibleMoves.add(new ChessMove(myPosition, possiblePosition, null));
             }
         }
     }
