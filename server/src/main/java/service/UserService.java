@@ -14,7 +14,8 @@ public class UserService {
     }
 
     public RegisterResult register(RegisterRequest registerRequest) throws DataAccessException {
-        if (registerRequest.username() == null || registerRequest.password() == null || registerRequest.email() == null || registerRequest.username().isBlank() || registerRequest.password().isBlank() || registerRequest.email().isBlank()) {
+        if (registerRequest.username() == null || registerRequest.password() == null || registerRequest.email() == null ||
+                registerRequest.username().isBlank() || registerRequest.password().isBlank() || registerRequest.email().isBlank()) {
             throw new DataAccessException("Bad request");
         }
         UserData user = new UserData(registerRequest.username(), registerRequest.password(), registerRequest.email());
@@ -25,7 +26,8 @@ public class UserService {
     }
 
     public LoginResult login(LoginRequest loginRequest) throws DataAccessException {
-        if (loginRequest.username() == null || loginRequest.username().isBlank() || loginRequest.password() == null || loginRequest.password().isBlank()) {
+        if (loginRequest.username() == null || loginRequest.username().isBlank() || loginRequest.password() == null ||
+                loginRequest.password().isBlank()) {
             throw new DataAccessException("Bad request");
         }
         UserData user = dataAccess.getUser(loginRequest.username());

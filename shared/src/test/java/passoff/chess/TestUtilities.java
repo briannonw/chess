@@ -95,7 +95,7 @@ public class TestUtilities {
     }
 
     private static int moveToInt(ChessMove move) {
-        return 1000 * positionToInt(move.getStartPosition()) + 10 * positionToInt(move.getEndPosition()) +
-                ((move.getPromotionPiece() != null) ? move.getPromotionPiece().ordinal() + 1 : 0);
+        return 1000 * positionToInt(move.startPosition()) + 10 * positionToInt(move.endPosition()) +
+                ((move.promotionPiece() != null) ? move.promotionPiece().ordinal() + 1 : 0);
     }
 }
