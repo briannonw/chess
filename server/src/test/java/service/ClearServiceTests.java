@@ -47,7 +47,8 @@ public class ClearServiceTests {
         LoginRequest newUserLogin = new LoginRequest(newUser.username(), newUser.password());
         assertThrows(DataAccessException.class, () -> userService.login(newUserLogin), "New user should not be able to log in after clear");
 
-        assertThrows(DataAccessException.class, () -> gameService.listGames(new ListGamesRequest(newUserAuth)), "Old auth token should throw an exception");
+        assertThrows(DataAccessException.class, () -> gameService.listGames(new ListGamesRequest(newUserAuth)),
+                "Old auth token should throw an exception");
 
         registerResult = userService.register(registerRequest);
         String newAuth = registerResult.authToken();

@@ -54,10 +54,12 @@ public class UserServiceTests {
         dataAccess.createUser(existingUser);
 
         LoginRequest wrongPassword = new LoginRequest(existingUser.username(), "wrongPassword");
-        Assertions.assertThrows(DataAccessException.class, () -> userService.login(wrongPassword), "Login with wrong password should throw an exception");
+        Assertions.assertThrows(DataAccessException.class, () -> userService.login(wrongPassword),
+                "Login with wrong password should throw an exception");
 
         LoginRequest wrongUsername = new LoginRequest("wrongUsername", "password");
-        Assertions.assertThrows(DataAccessException.class, () -> userService.login(wrongUsername), "Login with wrong username should throw an exception");
+        Assertions.assertThrows(DataAccessException.class, () -> userService.login(wrongUsername),
+                "Login with wrong username should throw an exception");
     }
 
     @Test
@@ -77,14 +79,16 @@ public class UserServiceTests {
         dataAccess.createUser(existingUser);
 
         RegisterRequest request = new RegisterRequest(existingUser.username(), existingUser.password(), existingUser.email());
-        Assertions.assertThrows(DataAccessException.class, () -> userService.register(request), "Registering existing user should throw an exception");
+        Assertions.assertThrows(DataAccessException.class, () -> userService.register(request),
+                "Registering existing user should throw an exception");
     }
 
     @Test
     @DisplayName("Register Bad Request")
     public void registerBadRequest() {
         RegisterRequest request = new RegisterRequest(newUser.username(), null, newUser.email());
-        Assertions.assertThrows(DataAccessException.class, () -> userService.register(request), "Registration without a password should throw an exception");
+        Assertions.assertThrows(DataAccessException.class, () -> userService.register(request),
+                "Registration without a password should throw an exception");
     }
 
     @Test
