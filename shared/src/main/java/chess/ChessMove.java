@@ -8,7 +8,7 @@ import java.util.Objects;
  * Note: You can add to this class, but you may not alter
  * signature of the existing methods.
  */
-public record ChessMove(ChessPosition startPosition, ChessPosition endPosition, ChessPiece.PieceType promotionPiece) {
+public class ChessMove {
 
     @Override
     public boolean equals(Object o) {
@@ -20,19 +20,33 @@ public record ChessMove(ChessPosition startPosition, ChessPosition endPosition, 
                 promotionPiece == chessMove.promotionPiece;
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(startPosition, endPosition, promotionPiece);
+    }
+
+    private final ChessPosition startPosition;
+    private final ChessPosition endPosition;
+    private final ChessPiece.PieceType promotionPiece;
+
+    public ChessMove(ChessPosition startPosition, ChessPosition endPosition,
+                     ChessPiece.PieceType promotionPiece) {
+        this.startPosition = startPosition;
+        this.endPosition = endPosition;
+        this.promotionPiece = promotionPiece;
+    }
+
     /**
      * @return ChessPosition of starting location
      */
-    @Override
-    public ChessPosition startPosition() {
+    public ChessPosition getStartPosition() {
         return startPosition;
     }
 
     /**
      * @return ChessPosition of ending location
      */
-    @Override
-    public ChessPosition endPosition() {
+    public ChessPosition getEndPosition() {
         return endPosition;
     }
 
@@ -42,8 +56,7 @@ public record ChessMove(ChessPosition startPosition, ChessPosition endPosition, 
      *
      * @return Type of piece to promote a pawn to, or null if no promotion
      */
-    @Override
-    public ChessPiece.PieceType promotionPiece() {
+    public ChessPiece.PieceType getPromotionPiece() {
         return promotionPiece;
     }
 }

@@ -26,8 +26,8 @@ public class UserService {
     }
 
     public LoginResult login(LoginRequest loginRequest) throws DataAccessException {
-        if (loginRequest.username() == null || loginRequest.username().isBlank() || loginRequest.password() == null ||
-                loginRequest.password().isBlank()) {
+        if (loginRequest.username() == null || loginRequest.username().isBlank() ||
+                loginRequest.password() == null || loginRequest.password().isBlank()) {
             throw new DataAccessException("Bad request");
         }
         UserData user = dataAccess.getUser(loginRequest.username());
