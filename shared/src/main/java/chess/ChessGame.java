@@ -75,7 +75,7 @@ public class ChessGame {
         Collection<ChessMove> validMoves = new ArrayList<>();
 
         for (ChessMove possibleMove : possibleMoves) {
-            ChessPosition endPosition = possibleMove.endPosition();
+            ChessPosition endPosition = possibleMove.getEndPosition();
 
             ChessBoard originalBoard = board;
             ChessBoard tempBoard = makeCopy();
@@ -111,8 +111,8 @@ public class ChessGame {
      * @throws InvalidMoveException if move is invalid
      */
     public void makeMove(ChessMove move) throws InvalidMoveException {
-        ChessPosition startPosition = move.startPosition();
-        ChessPosition endPosition = move.endPosition();
+        ChessPosition startPosition = move.getStartPosition();
+        ChessPosition endPosition = move.getEndPosition();
         ChessPiece piece = getBoard().getPiece(startPosition);
         Collection<ChessMove> validMoves = validMoves(startPosition);
 
@@ -123,8 +123,8 @@ public class ChessGame {
         board.addPiece(endPosition, piece);
         board.addPiece(startPosition, null);
 
-        if (move.promotionPiece() != null) {
-            board.addPiece(endPosition, new ChessPiece(piece.getTeamColor(), move.promotionPiece()));
+        if (move.getPromotionPiece() != null) {
+            board.addPiece(endPosition, new ChessPiece(piece.getTeamColor(), move.getPromotionPiece()));
         }
 
         if (teamTurn == TeamColor.WHITE) {
@@ -155,7 +155,7 @@ public class ChessGame {
             }
         }
         for (ChessMove enemyMove : enemyMoves) {
-            if (enemyMove.endPosition().equals(kingSquare)) {
+            if (enemyMove.getEndPosition().equals(kingSquare)) {
                 return true;
             }
         }
@@ -174,8 +174,8 @@ public class ChessGame {
         }
         Collection<ChessMove> teamMoves = getTeamMoves(teamColor);
         for (ChessMove teamMove : teamMoves) {
-            ChessPosition startPosition = teamMove.startPosition();
-            ChessPosition endPosition = teamMove.endPosition();
+            ChessPosition startPosition = teamMove.getStartPosition();
+            ChessPosition endPosition = teamMove.getEndPosition();
             ChessPiece piece = getBoard().getPiece(startPosition);
 
             ChessBoard originalBoard = board;
