@@ -1,10 +1,11 @@
 package server;
 
+import com.google.gson.Gson;
+
 import dataaccess.DataAccessException;
 import dataaccess.MemoryDataAccess;
 import io.javalin.*;
 import io.javalin.http.Context;
-import io.javalin.json.JavalinJackson;
 import service.*;
 import model.*;
 
@@ -19,9 +20,7 @@ public class Server {
     private final GameService gameService = new GameService(dataAccess);
 
     public Server() {
-        javalin = Javalin.create(config -> {config.staticFiles.add("web");
-            config.jsonMapper(new JavalinJackson());
-        });
+        javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
         javalin.post("/user", this::register);
         javalin.post("/session", this::login);
@@ -65,14 +64,14 @@ public class Server {
     }
 
     private void register(Context ctx) throws DataAccessException {
-        RegisterRequest request = ctx.bodyAsClass(RegisterRequest.class);
+        RegisterRequest request = new Gson().fromJson(ctx.body(), RegisterRequest.class);
         RegisterResult result = userService.register(request);
         ctx.status(200);
         ctx.json(result);
     }
 
     private void login(Context ctx) throws DataAccessException {
-        LoginRequest request = ctx.bodyAsClass(LoginRequest.class);
+        LoginRequest request = new Gson().fromJson(ctx.body(), LoginRequest.class);
         LoginResult result = userService.login(request);
         ctx.status(200);
         ctx.json(result);
@@ -95,7 +94,7 @@ public class Server {
 
     private void createGame(Context ctx) throws DataAccessException {
         String authToken = ctx.header("authorization");
-        CreateGameRequest body = ctx.bodyAsClass(CreateGameRequest.class);
+        CreateGameRequest body = new Gson().fromJson(ctx.body(), CreateGameRequest.class);
         CreateGameRequest request = new CreateGameRequest(authToken, body.gameName());
         CreateGameResult result = gameService.createGame(request);
         ctx.status(200);
@@ -104,7 +103,7 @@ public class Server {
 
     private void joinGame(Context ctx) throws DataAccessException {
         String authToken = ctx.header("authorization");
-        JoinGameRequest body = ctx.bodyAsClass(JoinGameRequest.class);
+        JoinGameRequest body = new Gson().fromJson(ctx.body(), JoinGameRequest.class);
         JoinGameRequest request = new JoinGameRequest(authToken, body.playerColor(), body.gameID());
         gameService.joinGame(request);
         ctx.status(200);
