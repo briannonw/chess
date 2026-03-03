@@ -5,6 +5,7 @@ import dataaccess.DataAccessException;
 import dataaccess.MemoryDataAccess;
 import io.javalin.*;
 import io.javalin.http.Context;
+import io.javalin.json.JavalinJackson;
 import service.*;
 import model.*;
 
@@ -19,7 +20,9 @@ public class Server {
     private final GameService gameService = new GameService(dataAccess);
 
     public Server() {
-        javalin = Javalin.create(config -> config.staticFiles.add("web"));
+        javalin = Javalin.create(config -> {config.staticFiles.add("web");
+            config.jsonMapper(new JavalinJackson());
+        });
 
         javalin.post("/user", this::register);
         javalin.post("/session", this::login);
@@ -28,7 +31,6 @@ public class Server {
         javalin.post("/game", this::createGame);
         javalin.put("/game", this::joinGame);
         javalin.delete("/db", this::clear);
-        // Register your endpoints and exception handlers here.
 
         javalin.exception(DataAccessException.class, this::exceptionHandler);
     }
