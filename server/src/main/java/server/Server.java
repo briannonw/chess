@@ -46,35 +46,27 @@ public class Server {
         String message = ex.getMessage();
 
         switch (message) {
-            case "Bad request":
-                ctx.status(400);
-                break;
-            case "Unauthorized":
-                ctx.status(401);
-                break;
-            case "Already taken":
-                ctx.status(403);
-                break;
-            default:
-                ctx.status(500);
-                break;
+            case "Bad request" -> ctx.status(400);
+            case "Unauthorized" ->ctx.status(401);
+            case "Already taken" -> ctx.status(403);
+            default -> ctx.status(500);
         }
 
-        ctx.json(Map.of("message","Error: " + message));
+        ctx.result(new Gson().toJson(Map.of("message","Error: " + message)));
     }
 
     private void register(Context ctx) throws DataAccessException {
         RegisterRequest request = new Gson().fromJson(ctx.body(), RegisterRequest.class);
         RegisterResult result = userService.register(request);
         ctx.status(200);
-        ctx.json(result);
+        ctx.result(new Gson().toJson(result));
     }
 
     private void login(Context ctx) throws DataAccessException {
         LoginRequest request = new Gson().fromJson(ctx.body(), LoginRequest.class);
         LoginResult result = userService.login(request);
         ctx.status(200);
-        ctx.json(result);
+        ctx.result(new Gson().toJson(result));
     }
 
     private void logout(Context ctx) throws DataAccessException {
@@ -82,14 +74,14 @@ public class Server {
         LogoutRequest request = new LogoutRequest(authToken);
         userService.logout(request);
         ctx.status(200);
-        ctx.json(Map.of());
+        ctx.result("{}");
     }
     private void listGames(Context ctx) throws DataAccessException {
         String authToken = ctx.header("authorization");
         ListGamesRequest request = new ListGamesRequest(authToken);
         ListGamesResult result = gameService.listGames(request);
         ctx.status(200);
-        ctx.json(result);
+        ctx.result(new Gson().toJson(result));
     }
 
     private void createGame(Context ctx) throws DataAccessException {
@@ -98,7 +90,7 @@ public class Server {
         CreateGameRequest request = new CreateGameRequest(authToken, body.gameName());
         CreateGameResult result = gameService.createGame(request);
         ctx.status(200);
-        ctx.json(result);
+        ctx.result(new Gson().toJson(result));
     }
 
     private void joinGame(Context ctx) throws DataAccessException {
@@ -107,12 +99,12 @@ public class Server {
         JoinGameRequest request = new JoinGameRequest(authToken, body.playerColor(), body.gameID());
         gameService.joinGame(request);
         ctx.status(200);
-        ctx.json(Map.of());
+        ctx.result("{}");
     }
 
     private void clear(Context ctx) throws DataAccessException {
         clearService.clear();
         ctx.status(200);
-        ctx.json(Map.of());
+        ctx.result("{}");
     }
 }
