@@ -47,10 +47,10 @@ public class DatabaseManager {
                 "PRIMARY KEY (gameID))";
         try (var conn = DatabaseManager.getConnection()) {
             var preparedSqlUsers = conn.prepareStatement(sqlUsers);
-            var preparedSqlAuthTokens = conn.prepareStatement(sqlAuthTokens);
-            var preparedSqlGames = conn.prepareStatement(sqlGames);
             preparedSqlUsers.executeUpdate();
+            var preparedSqlAuthTokens = conn.prepareStatement(sqlAuthTokens);
             preparedSqlAuthTokens.executeUpdate();
+            var preparedSqlGames = conn.prepareStatement(sqlGames);
             preparedSqlGames.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("Failed to create tables");
