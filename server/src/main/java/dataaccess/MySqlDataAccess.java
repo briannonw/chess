@@ -50,8 +50,27 @@ public class MySqlDataAccess {
         }
     }
 
-    public UserData getUser(String username) {
-//        return users.get(username);
+    public UserData getUser(String username) throws DataAccessException {
+        var getUser = "SELECT username, password, email " +
+                "FROM users " +
+                "WHERE username = ?";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedGetUser = conn.prepareStatement(getUser);
+            preparedGetUser.setString(1, username);
+            var rs = preparedGetUser.executeQuery();
+
+            if (rs.next()) {
+                var userName = rs.getString("username");
+                var password = rs.getString("password");
+                var email = rs.getString("email");
+
+                return new UserData(userName, password, email);
+            }
+            return null;
+
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to get user", e);
+        }
     }
 
     public void createGame(GameData game) throws DataAccessException {
