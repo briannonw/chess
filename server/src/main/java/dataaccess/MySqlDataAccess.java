@@ -3,11 +3,12 @@ package dataaccess;
 import model.AuthData;
 import model.GameData;
 import model.UserData;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.SQLException;
 import java.util.List;
 
-public class MySqlDataAccess {
+public class MySqlDataAccess implements DataAccess {
 
     public MySqlDataAccess() throws DataAccessException {
         DatabaseManager.createDatabase();
@@ -34,19 +35,41 @@ public class MySqlDataAccess {
     }
 
     public void createUser(UserData user) throws DataAccessException {
+        String hashedPassword = BCrypt.hashpw(user.password(), BCrypt.gensalt());
+
         var createUser = "INSERT INTO users (username, password, email)" +
                 "VALUES (?, ?, ?)";
         try (var conn = DatabaseManager.getConnection()) {
             var preparedCreateUser = conn.prepareStatement(createUser);
 
             preparedCreateUser.setString(1, user.username());
-            preparedCreateUser.setString(2, user.password());
+            preparedCreateUser.setString(2, hashedPassword);
             preparedCreateUser.setString(3, user.email());
 
             preparedCreateUser.executeUpdate();
 
         } catch (SQLException e) {
             throw new DataAccessException("Already taken", e);
+        }
+    }
+
+    public boolean verifyUser(String username, String providedPassword) throws DataAccessException {
+        var verifyUser = "SELECT password " +
+                "FROM users " +
+                "WHERE username = ?";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedVerifyUser = conn.prepareStatement(verifyUser);
+            preparedVerifyUser.setString(1, username);
+            var rs = preparedVerifyUser.executeQuery();
+
+            if (rs.next()) {
+                String hashedPassword = rs.getString("password");
+                return BCrypt.checkpw(providedPassword, hashedPassword);
+            } else {
+                return false;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to verify user", e);
         }
     }
 
@@ -60,11 +83,11 @@ public class MySqlDataAccess {
             var rs = preparedGetUser.executeQuery();
 
             if (rs.next()) {
-                var userName = rs.getString("username");
+                var user = rs.getString("username");
                 var password = rs.getString("password");
                 var email = rs.getString("email");
 
-                return new UserData(userName, password, email);
+                return new UserData(user, password, email);
             }
             return null;
 
@@ -80,12 +103,14 @@ public class MySqlDataAccess {
 //        games.put(game.gameID(), game);
     }
 
-    public GameData getGame(int gameID) {
+    public GameData getGame(int gameID) throws DataAccessException {
 //        return games.get(gameID);
+        return null;
     }
 
-    public List<GameData> listGames() {
+    public List<GameData> listGames() throws DataAccessException {
 //        return new ArrayList<>(games.values());
+        return null;
     }
 
     public void updateGame(GameData game) throws DataAccessException {
@@ -95,16 +120,57 @@ public class MySqlDataAccess {
 //        games.put(game.gameID(), game);
     }
 
-    public void createAuth(AuthData auth) {
-//        authTokens.put(auth.authToken(), auth);
+    public void createAuth(AuthData auth) throws DataAccessException {
+        var createAuth = "INSERT INTO authTokens (authToken, username)" +
+                "VALUES (?, ?)";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedCreateAuth = conn.prepareStatement(createAuth);
+
+            preparedCreateAuth.setString(1, auth.authToken());
+            preparedCreateAuth.setString(2, auth.username());
+
+            preparedCreateAuth.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to create auth", e);
+        }
     }
 
-    public AuthData getAuth(String authToken) {
-//        return authTokens.get(authToken);
+    public AuthData getAuth(String authToken) throws DataAccessException {
+        var getAuth = "SELECT authToken, username " +
+                "FROM authTokens " +
+                "WHERE authToken = ?";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedGetAuth = conn.prepareStatement(getAuth);
+
+            preparedGetAuth.setString(1, authToken);
+
+            var rs = preparedGetAuth.executeQuery();
+
+            if (rs.next()) {
+                var authToken1 = rs.getString("authToken");
+                var username = rs.getString("username");
+
+                return new AuthData(authToken1, username);
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to get auth", e);
+        }
     }
 
-    public void deleteAuth(String authToken) {
-//        authTokens.remove(authToken);
+    public void deleteAuth(String authToken) throws DataAccessException{
+        var deleteAuth = "DELETE FROM authTokens " +
+                "WHERE authToken = ?";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedDeleteAuth = conn.prepareStatement(deleteAuth);
+
+            preparedDeleteAuth.setString(1, authToken);
+
+            preparedDeleteAuth.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to delete auth", e);
+        }
     }
 
 }
