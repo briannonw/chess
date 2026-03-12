@@ -34,10 +34,20 @@ public class MySqlDataAccess {
     }
 
     public void createUser(UserData user) throws DataAccessException {
-//        if (users.containsKey(user.username())) {
-//            throw new DataAccessException("Already taken");
-//        }
-//        users.put(user.username(), user);
+        var createUser = "INSERT INTO users (username, password, email)" +
+                "VALUES (?, ?, ?)";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedCreateUser = conn.prepareStatement(createUser);
+
+            preparedCreateUser.setString(1, user.username());
+            preparedCreateUser.setString(2, user.password());
+            preparedCreateUser.setString(3, user.email());
+
+            preparedCreateUser.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DataAccessException("Already taken", e);
+        }
     }
 
     public UserData getUser(String username) {
