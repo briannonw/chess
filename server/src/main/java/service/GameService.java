@@ -88,8 +88,4 @@ public class GameService {
             throw new DataAccessException("Bad request");
         }
     }
-
-//    public static void resetLastGameID() {
-//        lastGameID = 1;
-//    }
 }

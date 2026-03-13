@@ -16,7 +16,6 @@ import java.util.Map;
 public class Server {
 
     private final Javalin javalin;
-//    private final MemoryDataAccess dataAccess = new MemoryDataAccess();
     private final DataAccess dataAccess;
     private final ClearService clearService;
     private final UserService userService;
@@ -25,6 +24,7 @@ public class Server {
     public Server() {
         try {
             dataAccess = new MySqlDataAccess();
+//            dataAccess = new MemoryDataAccess();
         } catch (DataAccessException e) {
             throw new RuntimeException(e);
         }
