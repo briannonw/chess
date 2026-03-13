@@ -1,11 +1,14 @@
 package dataaccess;
 
+import chess.ChessGame;
+import com.google.gson.Gson;
 import model.AuthData;
 import model.GameData;
 import model.UserData;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MySqlDataAccess implements DataAccess {
@@ -97,27 +100,97 @@ public class MySqlDataAccess implements DataAccess {
     }
 
     public void createGame(GameData game) throws DataAccessException {
-//        if (games.containsKey(game.gameID())) {
-//            throw new DataAccessException("Bad request");
-//        }
-//        games.put(game.gameID(), game);
+        var createGame = "INSERT INTO games (whiteUsername, blackUsername, gameName, game)" +
+                "VALUES (?, ?, ?, ?)";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedCreateGame = conn.prepareStatement(createGame);
+
+            var gameGson = new Gson();
+            String gameJson = gameGson.toJson(game.game());
+
+            preparedCreateGame.setString(1, game.whiteUsername());
+            preparedCreateGame.setString(2, game.blackUsername());
+            preparedCreateGame.setString(3, game.gameName());
+            preparedCreateGame.setString(4, gameJson);
+
+            preparedCreateGame.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to create game", e);
+        }
     }
 
     public GameData getGame(int gameID) throws DataAccessException {
-//        return games.get(gameID);
-        return null;
+        var getGame = "SELECT * " +
+                "FROM games " +
+                "WHERE gameID = ? ";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedGetGame = conn.prepareStatement(getGame);
+
+            preparedGetGame.setInt(1, gameID);
+
+            var rs = preparedGetGame.executeQuery();
+
+            if (rs.next()) {
+                var gameID1 = rs.getInt("gameID");
+                var whiteUsername = rs.getString("whiteUsername");
+                var blackUsername = rs.getString("blackUsername");
+                var gameName = rs.getString("gameName");
+
+                var gameGson = new Gson();
+                ChessGame chessGame = gameGson.fromJson(rs.getString("game"), ChessGame.class);
+
+                return new GameData(gameID1, whiteUsername, blackUsername, gameName, chessGame);
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to get game", e);
+        }
     }
 
     public List<GameData> listGames() throws DataAccessException {
-//        return new ArrayList<>(games.values());
-        return null;
+        var newList = new ArrayList<GameData>();
+        var listGames = "SELECT * FROM games";
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedListGames = conn.prepareStatement(listGames);
+            var rs = preparedListGames.executeQuery();
+            var gameGson = new Gson();
+
+            while (rs.next()) {
+                var gameID = rs.getInt("gameID");
+                var whiteUsername = rs.getString("whiteUsername");
+                var blackUsername = rs.getString("blackUsername");
+                var gameName = rs.getString("gameName");
+
+                ChessGame chessGame = gameGson.fromJson(rs.getString("game"), ChessGame.class);
+
+                newList.add(new GameData(gameID, whiteUsername, blackUsername, gameName, chessGame));
+            }
+            return newList;
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to list games", e);
+        }
     }
 
     public void updateGame(GameData game) throws DataAccessException {
-//        if (!games.containsKey(game.gameID())) {
-//            throw new DataAccessException("Bad request");
-//        }
-//        games.put(game.gameID(), game);
+        var updateGame = "UPDATE games " +
+                "SET whiteUsername = ?, blackUsername = ?, gameName = ?, game = ? " +
+                "WHERE gameID = ?"; // not sure if right? gameData is gameID, whiteUsername, blackUsername, gameName, game;
+        try (var conn = DatabaseManager.getConnection()) {
+            var preparedUpdateGame = conn.prepareStatement(updateGame);
+
+            var gameGson = new Gson();
+            String gameJson = gameGson.toJson(game.game());
+
+            preparedUpdateGame.setString(1, game.whiteUsername());
+            preparedUpdateGame.setString(2, game.blackUsername());
+            preparedUpdateGame.setString(3, game.gameName());
+            preparedUpdateGame.setString(4, gameJson);
+            preparedUpdateGame.setInt(5, game.gameID());
+
+            preparedUpdateGame.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to update game", e);
+        }
     }
 
     public void createAuth(AuthData auth) throws DataAccessException {
