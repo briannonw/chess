@@ -33,7 +33,8 @@ public class UserService {
             throw new DataAccessException("Bad request");
         }
 
-        if (!dataAccess.verifyUser(loginRequest.username(), loginRequest.password())) {
+        UserData user = dataAccess.getUser(loginRequest.username());
+        if (user == null || !dataAccess.verifyUser(loginRequest.username(), loginRequest.password())) {
             throw new DataAccessException("Unauthorized");
         }
         String authToken = UUID.randomUUID().toString();
