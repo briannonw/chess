@@ -25,4 +25,6 @@ public interface DataAccess {
     AuthData getAuth(String authToken) throws DataAccessException;
 
     void deleteAuth(String authToken) throws DataAccessException;
+
+    boolean verifyUser(String username, String password) throws DataAccessException;
 }

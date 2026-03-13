@@ -12,7 +12,6 @@ public class GameService {
     private final DataAccess dataAccess;
     private int lastGameID = 1;
 
-
     public GameService(DataAccess dataAccess) {
         this.dataAccess = dataAccess;
     }
@@ -89,4 +88,8 @@ public class GameService {
             throw new DataAccessException("Bad request");
         }
     }
+
+//    public static void resetLastGameID() {
+//        lastGameID = 1;
+//    }
 }

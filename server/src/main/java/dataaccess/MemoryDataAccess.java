@@ -61,4 +61,12 @@ public class MemoryDataAccess implements DataAccess {
     public void deleteAuth(String authToken) {
         authTokens.remove(authToken);
     }
+
+    public boolean verifyUser(String username, String password) {
+        UserData user = users.get(username);
+        if (user == null) {
+            return false;
+        }
+        return user.password().equals(password);
+    }
 }

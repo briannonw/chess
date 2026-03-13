@@ -2,6 +2,7 @@ package server;
 
 import com.google.gson.Gson;
 
+import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import dataaccess.MemoryDataAccess;
 import dataaccess.MySqlDataAccess;
@@ -15,13 +16,23 @@ import java.util.Map;
 public class Server {
 
     private final Javalin javalin;
-    private final MemoryDataAccess dataAccess = new MemoryDataAccess();
-//    private final MySqlDataAccess dataAccess = new MySqlDataAccess();
-    private final ClearService clearService = new ClearService(dataAccess);
-    private final UserService userService = new UserService(dataAccess);
-    private final GameService gameService = new GameService(dataAccess);
+//    private final MemoryDataAccess dataAccess = new MemoryDataAccess();
+    private final DataAccess dataAccess;
+    private final ClearService clearService;
+    private final UserService userService;
+    private final GameService gameService;
 
     public Server() {
+        try {
+            dataAccess = new MySqlDataAccess();
+        } catch (DataAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+        clearService = new ClearService(dataAccess);
+        userService = new UserService(dataAccess);
+        gameService = new GameService(dataAccess);
+
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
         javalin.post("/user", this::register);

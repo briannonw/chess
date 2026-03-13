@@ -22,6 +22,8 @@ public class UserService {
         dataAccess.createUser(user);
         String authToken = UUID.randomUUID().toString();
         dataAccess.createAuth(new AuthData(authToken, user.username()));
+        System.out.println("User created: " + user.username()); // temp
+        System.out.println("Auth created for: " + authToken); // temp
         return new RegisterResult(user.username(), authToken);
     }
 
@@ -30,13 +32,13 @@ public class UserService {
                 loginRequest.password() == null || loginRequest.password().isBlank()) {
             throw new DataAccessException("Bad request");
         }
-        UserData user = dataAccess.getUser(loginRequest.username());
-        if (user == null || !user.password().equals(loginRequest.password())) {
+
+        if (!dataAccess.verifyUser(loginRequest.username(), loginRequest.password())) {
             throw new DataAccessException("Unauthorized");
         }
         String authToken = UUID.randomUUID().toString();
-        dataAccess.createAuth(new AuthData(authToken, user.username()));
-        return new LoginResult(user.username(), authToken);
+        dataAccess.createAuth(new AuthData(authToken, loginRequest.username()));
+        return new LoginResult(loginRequest.username(), authToken);
     }
 
     public void logout(LogoutRequest logoutRequest) throws DataAccessException {

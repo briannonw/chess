@@ -22,6 +22,7 @@ public class MySqlDataAccess implements DataAccess {
         var clearAuthTokens = "DELETE FROM authTokens";
         var clearGames = "DELETE FROM games";
         var clearUsers = "DELETE FROM users";
+        var clearGameID = "ALTER TABLE games AUTO_INCREMENT = 1";
         try (var conn = DatabaseManager.getConnection()) {
             try (var preparedClearAuthTokens = conn.prepareStatement(clearAuthTokens)) {
                 preparedClearAuthTokens.executeUpdate();
@@ -31,6 +32,9 @@ public class MySqlDataAccess implements DataAccess {
             }
             try (var preparedClearUsers = conn.prepareStatement(clearUsers)) {
                 preparedClearUsers.executeUpdate();
+            }
+            try (var preparedClearGameID = conn.prepareStatement(clearGameID)) {
+                preparedClearGameID.executeUpdate();
             }
         } catch (SQLException e) {
             throw new DataAccessException("Failed to clear", e);
