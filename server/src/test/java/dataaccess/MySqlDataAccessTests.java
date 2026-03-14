@@ -4,13 +4,8 @@ import chess.ChessGame;
 import model.AuthData;
 import model.GameData;
 import model.UserData;
-import org.eclipse.jetty.server.Authentication;
 import org.junit.jupiter.api.*;
-import service.LoginRequest;
-import service.RegisterRequest;
-import service.RegisterResult;
 
-import javax.xml.crypto.Data;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,7 +13,6 @@ public class MySqlDataAccessTests {
 
     private MySqlDataAccess dataAccess;
     private UserData existingUser;
-    private UserData newUser;
 
     @BeforeEach
     void setUp() throws DataAccessException {
@@ -26,7 +20,6 @@ public class MySqlDataAccessTests {
         dataAccess.clear();
 
         existingUser = new UserData("ExistingUser", "existingUserPassword", "eu@gmail.com");
-        newUser = new UserData("NewUser", "newUserPassword", "nu@gmail.com");
     }
 
     @Test
@@ -205,17 +198,65 @@ public class MySqlDataAccessTests {
         GameData result = dataAccess.getGame(-1);
         assertNull(result);
     }
-    
-    // createAuth pass
 
-    // createAuth fail
+    @Test
+    @DisplayName("Create Auth Success")
+    public void createAuthSuccess() throws DataAccessException {
+        AuthData auth = new AuthData("token", existingUser.username());
+        dataAccess.createAuth(auth);
 
-    // getAuth pass
+        AuthData authResult = dataAccess.getAuth("token");
+        assertNotNull(authResult);
+        assertEquals("token", authResult.authToken());
+        assertEquals(existingUser.username(), authResult.username());
+    }
 
-    // getAuth fail
+    @Test
+    @DisplayName("Create Auth Fail")
+    public void createAuthFail() throws DataAccessException {
+        AuthData auth = new AuthData("token", existingUser.username());
+        dataAccess.createAuth(auth);
 
-    // deleteAuth pass
+        AuthData duplicateAuth = new AuthData("token", "Duplicate Auth");
 
-    // deleteAuth fail
+        Assertions.assertThrows(DataAccessException.class, () -> {dataAccess.createAuth(duplicateAuth);});
+    }
 
+
+    @Test
+    @DisplayName("Get Auth Success")
+    public void getAuthSuccess() throws DataAccessException {
+        AuthData auth = new AuthData("token", existingUser.username());
+        dataAccess.createAuth(auth);
+
+        AuthData authResult = dataAccess.getAuth("token");
+        assertNotNull(authResult);
+        assertEquals("token", authResult.authToken());
+        assertEquals(existingUser.username(), authResult.username());
+    }
+
+    @Test
+    @DisplayName("Get Auth Fail")
+    public void getAuthFail() throws DataAccessException {
+        AuthData authResult = dataAccess.getAuth("badToken");
+        assertNull(authResult);
+    }
+
+    @Test
+    @DisplayName("Delete Auth Success")
+    public void deleteAuthSuccess() throws DataAccessException {
+        AuthData auth = new AuthData("token", existingUser.username());
+        dataAccess.createAuth(auth);
+
+        dataAccess.deleteAuth("token");
+
+        AuthData authResult = dataAccess.getAuth("token");
+        assertNull(authResult);
+    }
+
+    @Test
+    @DisplayName("Delete Auth Fail")
+    public void deleteAuthFail() throws DataAccessException {
+        Assertions.assertDoesNotThrow(() -> dataAccess.deleteAuth("noToken"));
+    }
 }
