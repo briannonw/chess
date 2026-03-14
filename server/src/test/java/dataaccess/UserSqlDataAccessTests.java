@@ -26,8 +26,8 @@ public class UserSqlDataAccessTests {
     }
 
     @Test
-    @DisplayName("Normal User Registration")
-    public void registerSuccess() throws DataAccessException {
+    @DisplayName("Normal User Registration/Get User Success")
+    public void registerGetUserSuccess() throws DataAccessException {
         dataAccess.createUser(existingUser);
 
         UserData userResult = dataAccess.getUser(existingUser.username());
@@ -65,18 +65,6 @@ public class UserSqlDataAccessTests {
         boolean verified = dataAccess.verifyUser(existingUser.username(), "badPassword");
 
         assertFalse(verified);
-    }
-
-    @Test
-    @DisplayName("Get User Success") // same as create user/register user?
-    public void getUserSuccess() throws DataAccessException {
-        dataAccess.createUser(existingUser);
-
-        UserData userResult = dataAccess.getUser(existingUser.username());
-
-        assertNotNull(userResult);
-        assertEquals(existingUser.username(), userResult.username());
-        assertEquals(existingUser.email(), userResult.email());
     }
 
     @Test

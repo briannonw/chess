@@ -24,8 +24,8 @@ public class AuthSqlDataAccessTests {
     }
 
     @Test
-    @DisplayName("Create Auth Success")
-    public void createAuthSuccess() throws DataAccessException {
+    @DisplayName("Create/Get Auth Success")
+    public void createGetAuthSuccess() throws DataAccessException {
         AuthData auth = new AuthData("token", existingUser.username());
         dataAccess.createAuth(auth);
 
@@ -44,19 +44,6 @@ public class AuthSqlDataAccessTests {
         AuthData duplicateAuth = new AuthData("token", "Duplicate Auth");
 
         Assertions.assertThrows(DataAccessException.class, () -> {dataAccess.createAuth(duplicateAuth);});
-    }
-
-
-    @Test
-    @DisplayName("Get Auth Success")
-    public void getAuthSuccess() throws DataAccessException {
-        AuthData auth = new AuthData("token", existingUser.username());
-        dataAccess.createAuth(auth);
-
-        AuthData authResult = dataAccess.getAuth("token");
-        assertNotNull(authResult);
-        assertEquals("token", authResult.authToken());
-        assertEquals(existingUser.username(), authResult.username());
     }
 
     @Test
