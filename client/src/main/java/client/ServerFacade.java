@@ -12,6 +12,7 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import model.AuthData;
+import service.LoginRequest;
 import service.RegisterRequest;
 
 
@@ -30,6 +31,15 @@ public class ServerFacade {
         var registerResponse = sendRequest(registerRequest);
 
         return handleResponse(registerResponse, AuthData.class);
+    }
+
+    public AuthData login(String username, String password) throws  DataAccessException {
+        var body = new LoginRequest(username, password);
+
+        var loginRequest = buildRequest("POST", "/session", body);
+        var loginResponse = sendRequest(loginRequest);
+
+        return handleResponse(loginResponse, AuthData.class);
     }
 
     // register(username, password, email)
