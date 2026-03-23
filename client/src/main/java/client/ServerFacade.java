@@ -13,6 +13,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 
 import model.AuthData;
 import model.GameData;
+import service.CreateGameRequest;
 import service.LoginRequest;
 import service.RegisterRequest;
 
@@ -55,6 +56,15 @@ public class ServerFacade {
         var listGamesResponse = sendRequest(listGamesRequest);
 
         return handleResponse(listGamesResponse, GameData.class);
+    }
+
+    public GameData createGame(String authToken, String gameName) throws DataAccessException {
+        var body = new CreateGameRequest(authToken, gameName);
+
+        var createGameRequest = buildRequest("POST", "/game", body);
+        var createGameResponse = sendRequest(createGameRequest);
+
+        return handleResponse(createGameResponse, GameData.class);
     }
 
     // register(username, password, email)
