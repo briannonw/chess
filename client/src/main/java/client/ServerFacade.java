@@ -12,6 +12,7 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 
 import model.AuthData;
+import model.GameData;
 import service.LoginRequest;
 import service.RegisterRequest;
 
@@ -47,6 +48,13 @@ public class ServerFacade {
         var logoutResponse = sendRequest(logoutRequest);
 
         return handleResponse(logoutResponse, AuthData.class);
+    }
+
+    public GameData listGame(String authToken) throws DataAccessException {
+        var listGamesRequest = buildRequest("GET", "/game", authToken);
+        var listGamesResponse = sendRequest(listGamesRequest);
+
+        return handleResponse(listGamesResponse, GameData.class);
     }
 
     // register(username, password, email)
