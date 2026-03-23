@@ -42,12 +42,20 @@ public class ServerFacade {
         return handleResponse(loginResponse, AuthData.class);
     }
 
+    public AuthData logout(String authToken) throws DataAccessException {
+        var logoutRequest = buildRequest("DELETE", "/session", authToken);
+        var logoutResponse = sendRequest(logoutRequest);
+
+        return handleResponse(logoutResponse, AuthData.class);
+    }
+
     // register(username, password, email)
     // login(username, password)
     // logout(authToken)
     // createGame(authToken, gameName)
     // listGames(authToken)
     // joinGame(authToken, gameID, color)
+    // clear
 
     private HttpRequest buildRequest(String method, String path, Object body) {
         var request = HttpRequest.newBuilder()
