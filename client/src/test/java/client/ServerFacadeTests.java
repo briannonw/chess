@@ -71,12 +71,18 @@ public class ServerFacadeTests {
 
     @Test
     public void logoutSuccess() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+
+        assertDoesNotThrow(() -> facade.logout(loginResult.authToken()));
     }
 
     @Test
     public void logoutFail() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        facade.login("ExistingUser", "existingUserPassword");
+
+        assertThrows(DataAccessException.class, () -> facade.logout("authToken"));
     }
 
     @Test
