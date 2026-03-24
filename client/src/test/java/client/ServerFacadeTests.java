@@ -87,12 +87,26 @@ public class ServerFacadeTests {
 
     @Test
     public void listGamesSuccess() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+
+        facade.createGame(loginResult.authToken(), "Game1");
+        facade.createGame(loginResult.authToken(), "Game2");
+        ListGamesResult listGamesResult = facade.listGames(loginResult.authToken());
+
+        assertNotNull(listGamesResult);
+        assertEquals(2, listGamesResult.games().size());
     }
 
     @Test
     public void listGamesFail() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+
+        facade.createGame(loginResult.authToken(), "Game1");
+        facade.createGame(loginResult.authToken(), "Game2");
+
+        assertThrows(DataAccessException.class, () -> facade.listGames("authToken"));
     }
 
     @Test
