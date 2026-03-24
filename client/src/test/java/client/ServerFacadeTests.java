@@ -1,11 +1,10 @@
 package client;
 
 import dataaccess.DataAccessException;
-import model.UserData;
 
 import org.junit.jupiter.api.*;
 import server.Server;
-import service.RegisterResult;
+import service.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -40,18 +39,84 @@ public class ServerFacadeTests {
         RegisterResult registerResult = facade.register("NewUser", "newUserPassword", "nu@gmail.com");
 
         assertNotNull(registerResult);
-        assertNotNull(registerResult.authToken());
-        assertFalse(registerResult.authToken().isEmpty());
         assertEquals("NewUser", registerResult.username());
+        assertFalse(registerResult.authToken().isEmpty());
+        assertNotNull(registerResult.authToken());
     }
 
     @Test
     public void registerFail() throws DataAccessException {
         facade.register("NewUser", "newUserPassword", "nu@gmail.com");
 
-        assertThrows(DataAccessException.class, () -> {
-            facade.register("NewUser", "newUserPassword", "nu@gmail.com");
-        });
+        assertThrows(DataAccessException.class, () -> facade.register("NewUser", "newUserPassword", "nu@gmail.com"));
+    }
+
+    @Test
+    public void loginSuccess() throws DataAccessException {
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+
+        assertNotNull(loginResult);
+        assertEquals("ExistingUser", loginResult.username());
+        assertFalse(loginResult.authToken().isEmpty());
+        assertNotNull(loginResult.authToken());
+    }
+
+    @Test
+    public void loginFail() throws DataAccessException {
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+
+        assertThrows(DataAccessException.class, () -> facade.login("WrongUsername", "existingUserPassword"));
+    }
+
+    @Test
+    public void logoutSuccess() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void logoutFail() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void listGamesSuccess() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void listGamesFail() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void createGameSuccess() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void createGameFail() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void joinGameSuccess() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void joinGameFail() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void clearSuccess() throws DataAccessException {
+        //
+    }
+
+    @Test
+    public void clearFail() throws DataAccessException {
+        //
     }
 
 }
