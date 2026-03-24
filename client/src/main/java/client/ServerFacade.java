@@ -11,12 +11,7 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 
-import model.AuthData;
-import model.GameData;
-import service.CreateGameRequest;
-import service.JoinGameRequest;
-import service.LoginRequest;
-import service.RegisterRequest;
+import service.*;
 
 
 public class ServerFacade {
@@ -27,70 +22,69 @@ public class ServerFacade {
         this.serverUrl = "http://localhost:" + port;
     }
 
-    public AuthData register(String username, String password, String email) throws DataAccessException {
+    public RegisterResult register(String username, String password, String email) throws DataAccessException {
         var body = new RegisterRequest(username, password, email);
 
-        var registerRequest = buildRequest("POST", "/user", body);
+        var registerRequest = buildRequest("POST", "/user", body, null);
         var registerResponse = sendRequest(registerRequest);
 
-        return handleResponse(registerResponse, AuthData.class);
+        return handleResponse(registerResponse, RegisterResult.class);
     }
 
-    public AuthData login(String username, String password) throws  DataAccessException {
+    public LoginResult login(String username, String password) throws  DataAccessException {
         var body = new LoginRequest(username, password);
 
-        var loginRequest = buildRequest("POST", "/session", body);
+        var loginRequest = buildRequest("POST", "/session", body, null);
         var loginResponse = sendRequest(loginRequest);
 
-        return handleResponse(loginResponse, AuthData.class);
+        return handleResponse(loginResponse, LoginResult.class);
     }
 
-    public AuthData logout(String authToken) throws DataAccessException {
-        var logoutRequest = buildRequest("DELETE", "/session", authToken);
+    public void logout(String authToken) throws DataAccessException {
+        var logoutRequest = buildRequest("DELETE", "/session", null, authToken);
         var logoutResponse = sendRequest(logoutRequest);
-
-        return handleResponse(logoutResponse, AuthData.class);
+        handleResponse(logoutResponse, null);
     }
 
-    public GameData listGame(String authToken) throws DataAccessException {
-        var listGamesRequest = buildRequest("GET", "/game", authToken);
+    public ListGamesResult listGames(String authToken) throws DataAccessException {
+        var listGamesRequest = buildRequest("GET", "/game", null, authToken);
         var listGamesResponse = sendRequest(listGamesRequest);
 
-        return handleResponse(listGamesResponse, GameData.class);
+        return handleResponse(listGamesResponse, ListGamesResult.class);
     }
 
-    public GameData createGame(String authToken, String gameName) throws DataAccessException {
+    public CreateGameResult createGame(String authToken, String gameName) throws DataAccessException {
         var body = new CreateGameRequest(authToken, gameName);
 
-        var createGameRequest = buildRequest("POST", "/game", body);
+        var createGameRequest = buildRequest("POST", "/game", body, authToken);
         var createGameResponse = sendRequest(createGameRequest);
 
-        return handleResponse(createGameResponse, GameData.class);
+        return handleResponse(createGameResponse, CreateGameResult.class);
     }
 
-    public GameData joinGame(String authToken, String playerColor, int gameID) throws DataAccessException {
+    public void joinGame(String authToken, String playerColor, int gameID) throws DataAccessException {
         var body = new JoinGameRequest(authToken, playerColor, gameID);
 
-        var joinGameRequest = buildRequest("PUT", "/game", body);
+        var joinGameRequest = buildRequest("PUT", "/game", body, authToken);
         var joinGameResponse = sendRequest(joinGameRequest);
-
-        return handleResponse(joinGameResponse, GameData.class);
+        handleResponse(joinGameResponse, null);
     }
 
-    // register(username, password, email)
-    // login(username, password)
-    // logout(authToken)
-    // createGame(authToken, gameName)
-    // listGames(authToken)
-    // joinGame(authToken, gameID, color)
-    // clear
+    public void clear() throws DataAccessException {
+        var clearRequest = buildRequest("DELETE", "/db", null, null);
+        var clearResponse = sendRequest(clearRequest);
+        handleResponse(clearResponse, null);
+    }
 
-    private HttpRequest buildRequest(String method, String path, Object body) {
+    private HttpRequest buildRequest(String method, String path, Object body, String authToken) {
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(serverUrl + path))
                 .method(method, makeRequestBody(body));
         if (body != null) {
             request.setHeader("Content-Type", "application/json");
+        }
+        if (authToken != null) {
+            request.setHeader("authorization", authToken);
         }
         return request.build();
     }
