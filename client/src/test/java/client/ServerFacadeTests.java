@@ -1,5 +1,6 @@
 package client;
 
+import chess.ChessGame;
 import dataaccess.DataAccessException;
 
 import org.junit.jupiter.api.*;
@@ -132,21 +133,30 @@ public class ServerFacadeTests {
 
     @Test
     public void joinGameSuccess() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+        CreateGameResult createGameResult = facade.createGame(loginResult.authToken(), "Game1");
+
+        facade.joinGame(loginResult.authToken(), ChessGame.TeamColor.WHITE.name(), createGameResult.gameID());
+        ListGamesResult listGamesResult = facade.listGames(loginResult.authToken());
+
+        assertNotNull(listGamesResult);
+        assertEquals(1, listGamesResult.games().size());
+        assertEquals(loginResult.username(), listGamesResult.games().getFirst().whiteUsername());
+        assertNull(listGamesResult.games().getFirst().blackUsername());
     }
 
     @Test
     public void joinGameFail() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+        facade.createGame(loginResult.authToken(), "Game1");
+
+        assertThrows(DataAccessException.class, () -> facade.joinGame(loginResult.authToken(), ChessGame.TeamColor.WHITE.name(), -1));
     }
 
     @Test
     public void clearSuccess() throws DataAccessException {
-        //
-    }
-
-    @Test
-    public void clearFail() throws DataAccessException {
         //
     }
 
