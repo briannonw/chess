@@ -29,7 +29,9 @@ public class ChessClient {
 
             try {
                 result = eval(line);
-                System.out.print(result);
+                if (!result.equals("quit")) {
+                    System.out.print(result);
+                }
             } catch (Throwable e) {
                 var msg = e.toString();
                 System.out.print(msg);
@@ -86,7 +88,13 @@ public class ChessClient {
     }
 
     public String register(String[] params) throws DataAccessException {
-        return "";
+        if (params.length == 3) {
+            var result = server.register(params[0], params[1], params[2]);
+            authToken = result.authToken();
+
+            return "Registered and logged in as " + result.username();
+        }
+        throw new DataAccessException("Expected: register <username> <password> <email>");
     }
 
     public String login(String[] params) throws DataAccessException {
