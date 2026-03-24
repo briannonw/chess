@@ -7,13 +7,7 @@ import org.junit.jupiter.api.*;
 import server.Server;
 import service.*;
 
-import javax.xml.crypto.Data;
-
 import static org.junit.jupiter.api.Assertions.*;
-
-
-//         existingUser = new UserData("ExistingUser", "existingUserPassword", "eu@gmail.com");
-//         newUser = new UserData("NewUser", "newUserPassword", "nu@gmail.com");
 
 public class ServerFacadeTests {
 
@@ -157,7 +151,21 @@ public class ServerFacadeTests {
 
     @Test
     public void clearSuccess() throws DataAccessException {
-        //
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+        facade.createGame(loginResult.authToken(), "Game1");
+
+        facade.clear();
+
+        assertThrows(DataAccessException.class, () -> facade.login("ExistingUser", "existingUserPassword"));
+        assertThrows(DataAccessException.class, () -> facade.listGames(loginResult.authToken()));
+
+        facade.register("NewUser", "newUserPassword", "nu@gmail.com");
+        LoginResult newLoginResult = facade.login("NewUser", "newUserPassword");
+        ListGamesResult listGamesResult = facade.listGames(newLoginResult.authToken());
+
+        assertNotNull(listGamesResult);
+        assertEquals(0, listGamesResult.games().size());
     }
 
 }
