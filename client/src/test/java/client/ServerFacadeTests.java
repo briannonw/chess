@@ -38,8 +38,8 @@ public class ServerFacadeTests {
 
         assertNotNull(registerResult);
         assertEquals("NewUser", registerResult.username());
-        assertFalse(registerResult.authToken().isEmpty());
         assertNotNull(registerResult.authToken());
+        assertFalse(registerResult.authToken().isEmpty());
     }
 
     @Test
@@ -56,8 +56,8 @@ public class ServerFacadeTests {
 
         assertNotNull(loginResult);
         assertEquals("ExistingUser", loginResult.username());
-        assertFalse(loginResult.authToken().isEmpty());
         assertNotNull(loginResult.authToken());
+        assertFalse(loginResult.authToken().isEmpty());
     }
 
     @Test
@@ -65,6 +65,7 @@ public class ServerFacadeTests {
         facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
 
         assertThrows(DataAccessException.class, () -> facade.login("WrongUsername", "existingUserPassword"));
+        assertThrows(DataAccessException.class, () -> facade.login("ExistingUser", "WrongPassword"));
     }
 
     @Test
@@ -78,9 +79,12 @@ public class ServerFacadeTests {
     @Test
     public void logoutFail() throws DataAccessException {
         facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
-        facade.login("ExistingUser", "existingUserPassword");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
 
         assertThrows(DataAccessException.class, () -> facade.logout("authToken"));
+
+        facade.logout(loginResult.authToken());
+        assertThrows(DataAccessException.class, () -> facade.logout(loginResult.authToken()));
     }
 
     @Test
@@ -96,9 +100,12 @@ public class ServerFacadeTests {
     @Test
     public void createGameFail() throws DataAccessException {
         facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
-        facade.login("ExistingUser", "existingUserPassword");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
 
         assertThrows(DataAccessException.class, () -> facade.createGame("authToken", "Game1"));
+
+        facade.logout(loginResult.authToken());
+        assertThrows(DataAccessException.class, () -> facade.createGame(loginResult.authToken(), "Game1"));
     }
 
     @Test
@@ -167,5 +174,4 @@ public class ServerFacadeTests {
         assertNotNull(listGamesResult);
         assertEquals(0, listGamesResult.games().size());
     }
-
 }
