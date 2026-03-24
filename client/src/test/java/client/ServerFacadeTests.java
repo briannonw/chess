@@ -5,6 +5,9 @@ import dataaccess.DataAccessException;
 import org.junit.jupiter.api.*;
 import server.Server;
 import service.*;
+
+import javax.xml.crypto.Data;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -86,6 +89,24 @@ public class ServerFacadeTests {
     }
 
     @Test
+    public void createGameSuccess() throws DataAccessException {
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
+        CreateGameResult createGameResult = facade.createGame(loginResult.authToken(), "Game1");
+
+        assertNotNull(createGameResult);
+        assertTrue(createGameResult.gameID() > 0);
+    }
+
+    @Test
+    public void createGameFail() throws DataAccessException {
+        facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
+        facade.login("ExistingUser", "existingUserPassword");
+
+        assertThrows(DataAccessException.class, () -> facade.createGame("authToken", "Game1"));
+    }
+
+    @Test
     public void listGamesSuccess() throws DataAccessException {
         facade.register("ExistingUser", "existingUserPassword", "eu@gmail.com");
         LoginResult loginResult = facade.login("ExistingUser", "existingUserPassword");
@@ -107,16 +128,6 @@ public class ServerFacadeTests {
         facade.createGame(loginResult.authToken(), "Game2");
 
         assertThrows(DataAccessException.class, () -> facade.listGames("authToken"));
-    }
-
-    @Test
-    public void createGameSuccess() throws DataAccessException {
-        //
-    }
-
-    @Test
-    public void createGameFail() throws DataAccessException {
-        //
     }
 
     @Test
