@@ -118,7 +118,10 @@ public class ChessClient {
     }
 
     public String logout() throws DataAccessException {
-        return "";
+        server.logout(authToken);
+        authToken = null;
+        
+        return "Logged out";
     }
 
     public String createGame(String[] params) throws DataAccessException {
