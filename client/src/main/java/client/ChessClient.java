@@ -125,16 +125,23 @@ public class ChessClient {
     public String createGame(String[] params) throws DataAccessException {
         if (params.length == 1) {
             server.createGame(authToken, params[0]);
+            games = server.listGames(authToken).games();
 
             return "Created game: " + params[0];
         }
         throw new DataAccessException("Expected: create <gameName>");
     }
 
+    private List<ListGamesData> games = new ArrayList<>();
+
     public String listGames(String[] params) throws DataAccessException {
         if (params.length == 0) {
             ListGamesResult gamesList = server.listGames(authToken);
             games = gamesList.games();
+
+            if (games.isEmpty()) {
+                return "No games available. Create a game with '" + SET_TEXT_COLOR_BLUE + "create <gameName>" + RESET_TEXT_COLOR + "'";
+            }
 
             var result = new StringBuilder();
 
@@ -162,10 +169,12 @@ public class ChessClient {
         throw new DataAccessException("Expected: list");
     }
 
-    private List<ListGamesData> games = new ArrayList<>();
-
     public String joinGame(String[] params) throws DataAccessException {
         if (params.length == 2) {
+            if (games.isEmpty()) {
+                throw new DataAccessException("Error: No games listed. '" + SET_TEXT_COLOR_BLUE + "list" + SET_TEXT_COLOR_RED + "' first.");
+            }
+
             int i;
             try {
                 i = Integer.parseInt(params[0]);
@@ -174,7 +183,7 @@ public class ChessClient {
             }
 
             if (i < 1 || i > games.size()) {
-                throw new DataAccessException("Error:  Invalid game number");
+                throw new DataAccessException("Error: Invalid game number");
             }
 
             ListGamesData game = games.get(i - 1);
@@ -198,6 +207,10 @@ public class ChessClient {
 
     public String observeGame(String[] params) throws DataAccessException {
         if (params.length == 1) {
+            if (games.isEmpty()) {
+                throw new DataAccessException("Error: No games listed. Use '" + SET_TEXT_COLOR_BLUE + "list" + SET_TEXT_COLOR_RED + "' first.");
+            }
+
             int i;
             try {
                 i = Integer.parseInt(params[0]);
@@ -211,7 +224,6 @@ public class ChessClient {
 
             ListGamesData game = games.get(i - 1);
             int gameID = game.gameID();
-
 //            server.observeGame(authToken, gameID);
 
             Board.drawBoard(true);
