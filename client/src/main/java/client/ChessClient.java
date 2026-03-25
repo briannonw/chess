@@ -171,8 +171,9 @@ public class ChessClient {
 
     public String joinGame(String[] params) throws DataAccessException {
         if (params.length == 2) {
+            games = server.listGames(authToken).games();
             if (games.isEmpty()) {
-                throw new DataAccessException("Error: No games listed. '" + SET_TEXT_COLOR_BLUE + "list" + SET_TEXT_COLOR_RED + "' first.");
+                throw new DataAccessException("Error: No games available. Create a game with '" + SET_TEXT_COLOR_BLUE + "create <gameName>" + SET_TEXT_COLOR_RED + "'" + RESET_TEXT_COLOR);
             }
 
             int i;
@@ -207,8 +208,9 @@ public class ChessClient {
 
     public String observeGame(String[] params) throws DataAccessException {
         if (params.length == 1) {
+            games = server.listGames(authToken).games();
             if (games.isEmpty()) {
-                throw new DataAccessException("Error: No games listed. Use '" + SET_TEXT_COLOR_BLUE + "list" + SET_TEXT_COLOR_RED + "' first.");
+                throw new DataAccessException("Error: No games available. Create a game with '" + SET_TEXT_COLOR_BLUE + "create <gameName>" + SET_TEXT_COLOR_RED + "'" + RESET_TEXT_COLOR);
             }
 
             int i;
