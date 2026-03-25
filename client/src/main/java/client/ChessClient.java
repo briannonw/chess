@@ -1,10 +1,7 @@
 package client;
 
-import com.google.gson.Gson;
 import dataaccess.DataAccessException;
-import model.GameData;
 import model.ListGamesData;
-import service.ListGamesRequest;
 import service.ListGamesResult;
 
 import java.util.ArrayList;
@@ -57,9 +54,9 @@ public class ChessClient {
                 case "help" -> help();
                 case "register" -> register(params);
                 case "login" -> login(params);
-                case "logout" -> logout();
+                case "logout" -> logout(params);
                 case "create" -> createGame(params);
-                case "list" -> listGames();
+                case "list" -> listGames(params);
                 case "join" -> joinGame(params);
                 case "observe" -> observeGame(params);
                 case "quit" -> "quit";
@@ -76,8 +73,7 @@ public class ChessClient {
                     register <username> <password> <email>
                     login <username> <password>
                     quit
-                    help
-                    """;
+                    help""";
         } else {
             return """
                     create <gameName>
@@ -86,8 +82,7 @@ public class ChessClient {
                     observe <gameID>
                     logout
                     quit
-                    help
-                    """;
+                    help""";
         }
     }
 
@@ -111,11 +106,14 @@ public class ChessClient {
         throw new DataAccessException("Expected: login <username> <password>");
     }
 
-    public String logout() throws DataAccessException {
-        server.logout(authToken);
-        authToken = null;
+    public String logout(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            server.logout(authToken);
+            authToken = null;
 
-        return "Logged out";
+            return "Logged out";
+        }
+        throw new DataAccessException("Expected: logout");
     }
 
     public String createGame(String[] params) throws DataAccessException {
@@ -127,32 +125,35 @@ public class ChessClient {
         throw new DataAccessException("Expected: create <gameName>");
     }
 
-    public String listGames() throws DataAccessException {
-        ListGamesResult gamesList = server.listGames(authToken);
-        games = gamesList.games();
+    public String listGames(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            ListGamesResult gamesList = server.listGames(authToken);
+            games = gamesList.games();
 
-        var result = new StringBuilder();
+            var result = new StringBuilder();
 
-        int i = 1;
-        int size = gamesList.games().size();
-        for (ListGamesData game : gamesList.games()) {
-            result.append(i).append(". ").append(game.gameName()).append(" | WHITE: ");
-            if (game.whiteUsername() == null) {
-                result.append("empty").append(" | BLACK: ");
-            } else {
-                result.append(game.whiteUsername()).append(" | BLACK: ");
+            int i = 1;
+            int size = gamesList.games().size();
+            for (ListGamesData game : gamesList.games()) {
+                result.append(i).append(". ").append(game.gameName()).append(" | WHITE: ");
+                if (game.whiteUsername() == null) {
+                    result.append("empty").append(" | BLACK: ");
+                } else {
+                    result.append(game.whiteUsername()).append(" | BLACK: ");
+                }
+                if (game.blackUsername() == null) {
+                    result.append("empty");
+                } else {
+                    result.append(game.blackUsername());
+                }
+                if (i < size) {
+                    result.append('\n');
+                }
+                i++;
             }
-            if (game.blackUsername() == null) {
-                result.append("empty");
-            } else {
-                result.append(game.blackUsername());
-            }
-            if (i < size) {
-                result.append('\n');
-            }
-            i++;
+            return result.toString();
         }
-        return result.toString();
+        throw new DataAccessException("Expected: list");
     }
 
     private List<ListGamesData> games = new ArrayList<>();
@@ -186,6 +187,25 @@ public class ChessClient {
     }
 
     public String observeGame(String[] params) throws DataAccessException {
-        return "";
+        if (params.length == 1) {
+            int i;
+            try {
+                i = Integer.parseInt(params[0]);
+            } catch (NumberFormatException e) {
+                throw new DataAccessException("Error: Invalid game number");
+            }
+
+            if (i < 1 || i > games.size()) {
+                throw new DataAccessException("Error:  Invalid game number");
+            }
+
+            ListGamesData game = games.get(i - 1);
+            int gameID = game.gameID();
+
+//            server.observeGame(authToken, gameID);
+
+            return "Observing game " + i;
+        }
+        throw new DataAccessException("Expected: observe <gameID>");
     }
 }
