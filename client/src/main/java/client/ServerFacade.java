@@ -105,12 +105,16 @@ public class ServerFacade {
         }
     }
 
+    private static class ErrorResponse {
+        String message;
+    }
+
     private <T> T handleResponse(HttpResponse<String> response, Class<T> responseClass) throws DataAccessException {
         var status = response.statusCode();
 
         if (!isSuccessful(status)) {
-            String message = response.body();
-            throw new DataAccessException("Error: " + message);
+            var error = new Gson().fromJson(response.body(), ErrorResponse.class);
+            throw new DataAccessException(error.message);
         }
 
         if (responseClass != null) {

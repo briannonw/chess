@@ -44,6 +44,16 @@ public class ChessClient {
         System.out.print("\n>>> ");
     }
 
+//    private String cleanError(String msg) {
+//        if (msg.contains("Unauthorized")) {
+//            return "Error: Unauthorized";
+//        }
+//        if (msg.contains("already taken")) {
+//            return "Error: Username already taken";
+//        }
+//        return msg;
+//    }
+
     public String eval(String input) {
         try {
             String[] tokens = input.toLowerCase().split(" ");
@@ -98,7 +108,13 @@ public class ChessClient {
     }
 
     public String login(String[] params) throws DataAccessException {
-        return "";
+        if (params.length == 2) {
+            var result = server.login(params[0], params[1]);
+            authToken = result.authToken();
+
+            return "Logged in as " + result.username();
+        }
+        throw new DataAccessException("Expected: login <username> <password>");
     }
 
     public String logout() throws DataAccessException {
