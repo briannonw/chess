@@ -82,8 +82,8 @@ public class ChessClient {
             return """
                     create <gameName>
                     list
-                    join <gameName> <WHITE|BLACK>
-                    observe <ID>
+                    join <gameID> <WHITE|BLACK>
+                    observe <gameID>
                     logout
                     quit
                     help
@@ -129,6 +129,8 @@ public class ChessClient {
 
     public String listGames() throws DataAccessException {
         ListGamesResult gamesList = server.listGames(authToken);
+        games = gamesList.games();
+
         var result = new StringBuilder();
 
         int i = 1;
@@ -153,8 +155,34 @@ public class ChessClient {
         return result.toString();
     }
 
+    private List<ListGamesData> games = new ArrayList<>();
+
     public String joinGame(String[] params) throws DataAccessException {
-        return "";
+        if (params.length == 2) {
+            int i;
+            try {
+                i = Integer.parseInt(params[0]);
+            } catch (NumberFormatException e) {
+                throw new DataAccessException("Error: Invalid game number");
+            }
+
+            if (i < 1 || i > games.size()) {
+                throw new DataAccessException("Error:  Invalid game number");
+            }
+
+            ListGamesData game = games.get(i - 1);
+
+            int gameID = game.gameID();
+            String playerColor = params[1].toUpperCase();
+
+            if (!playerColor.equals("WHITE") && !playerColor.equals("BLACK")) {
+                throw new DataAccessException("Error: Invalid player color");
+            }
+
+            server.joinGame(authToken, playerColor, gameID);
+            return "Joined Game " + i + " as " + playerColor;
+        }
+        throw new DataAccessException("Expected: join <gameID> <WHITE|BLACK>");
     }
 
     public String observeGame(String[] params) throws DataAccessException {
