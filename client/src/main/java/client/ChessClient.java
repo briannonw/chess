@@ -56,7 +56,7 @@ public class ChessClient {
 
     public String eval(String input) {
         try {
-            String[] tokens = input.toLowerCase().split(" ");
+            String[] tokens = input.split(" ");
             String cmd = (tokens.length > 0) ? tokens[0] : "help";
             String[] params = Arrays.copyOfRange(tokens, 1, tokens.length);
             return switch (cmd) {
@@ -120,12 +120,17 @@ public class ChessClient {
     public String logout() throws DataAccessException {
         server.logout(authToken);
         authToken = null;
-        
+
         return "Logged out";
     }
 
     public String createGame(String[] params) throws DataAccessException {
-        return "";
+        if (params.length == 1) {
+            server.createGame(authToken, params[0]);
+
+            return "Created game: " + params[0];
+        }
+        throw new DataAccessException("Expected: create <gameName>");
     }
 
     private List<GameData> games = new ArrayList<>();
