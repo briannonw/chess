@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+import static ui.EscapeSequences.*;
+
 public class ChessClient {
     private final ServerFacade server;
     private String authToken = null;
@@ -42,7 +44,11 @@ public class ChessClient {
     }
 
     private void printPrompt() {
-        System.out.print("\n>>> ");
+        if (authToken == null) {
+            System.out.print("\n[LOGGED_OUT] >>> ");
+        } else {
+            System.out.print("\n[LOGGED_IN] >>> ");
+        }
     }
 
     public String eval(String input) {
@@ -63,26 +69,26 @@ public class ChessClient {
                 default -> help();
             };
         } catch (DataAccessException ex) {
-            return ex.getMessage();
+            return SET_TEXT_COLOR_RED + ex.getMessage() + RESET_TEXT_COLOR;
         }
     }
 
     public String help() {
         if (authToken == null) {
-            return """
+            return SET_TEXT_COLOR_BLUE + """
                     register <username> <password> <email>
                     login <username> <password>
                     quit
-                    help""";
+                    help""" + RESET_TEXT_COLOR;
         } else {
-            return """
+            return SET_TEXT_COLOR_BLUE + """
                     create <gameName>
                     list
                     join <gameID> <WHITE|BLACK>
                     observe <gameID>
                     logout
                     quit
-                    help""";
+                    help""" + RESET_TEXT_COLOR;
         }
     }
 
@@ -181,6 +187,10 @@ public class ChessClient {
             }
 
             server.joinGame(authToken, playerColor, gameID);
+
+            boolean isWhite = playerColor.equals("WHITE");
+            Board.drawBoard(isWhite);
+
             return "Joined Game " + i + " as " + playerColor;
         }
         throw new DataAccessException("Expected: join <gameID> <WHITE|BLACK>");
@@ -203,6 +213,8 @@ public class ChessClient {
             int gameID = game.gameID();
 
 //            server.observeGame(authToken, gameID);
+
+            Board.drawBoard(true);
 
             return "Observing game " + i;
         }
