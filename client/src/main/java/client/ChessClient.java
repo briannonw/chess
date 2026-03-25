@@ -1,7 +1,11 @@
 package client;
 
+import com.google.gson.Gson;
 import dataaccess.DataAccessException;
 import model.GameData;
+import model.ListGamesData;
+import service.ListGamesRequest;
+import service.ListGamesResult;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,16 +47,6 @@ public class ChessClient {
     private void printPrompt() {
         System.out.print("\n>>> ");
     }
-
-//    private String cleanError(String msg) {
-//        if (msg.contains("Unauthorized")) {
-//            return "Error: Unauthorized";
-//        }
-//        if (msg.contains("already taken")) {
-//            return "Error: Username already taken";
-//        }
-//        return msg;
-//    }
 
     public String eval(String input) {
         try {
@@ -133,9 +127,30 @@ public class ChessClient {
         throw new DataAccessException("Expected: create <gameName>");
     }
 
-    private List<GameData> games = new ArrayList<>();
     public String listGames() throws DataAccessException {
-        return "";
+        ListGamesResult gamesList = server.listGames(authToken);
+        var result = new StringBuilder();
+
+        int i = 1;
+        int size = gamesList.games().size();
+        for (ListGamesData game : gamesList.games()) {
+            result.append(i).append(". ").append(game.gameName()).append(" | WHITE: ");
+            if (game.whiteUsername() == null) {
+                result.append("empty").append(" | BLACK: ");
+            } else {
+                result.append(game.whiteUsername()).append(" | BLACK: ");
+            }
+            if (game.blackUsername() == null) {
+                result.append("empty");
+            } else {
+                result.append(game.blackUsername());
+            }
+            if (i < size) {
+                result.append('\n');
+            }
+            i++;
+        }
+        return result.toString();
     }
 
     public String joinGame(String[] params) throws DataAccessException {
