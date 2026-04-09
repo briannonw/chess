@@ -1,6 +1,5 @@
 package client;
 
-import com.google.gson.Gson;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;
@@ -16,12 +15,14 @@ import static ui.EscapeSequences.*;
 public class ChessClient implements NotificationHandler {
     private final ServerFacade server;
     private String authToken = null;
+    private String username = null;
+    private String gameName = null;
     private WebSocketFacade ws;
 
     @Override
     public void notify(Notification notification) {
         System.out.println(SET_TEXT_COLOR_MAGENTA + notification.message());
-        System.out.print("\n" + RESET_TEXT_COLOR);
+        System.out.print(RESET_TEXT_COLOR);
     }
 
     public ChessClient(int port) throws DataAccessException {
@@ -105,8 +106,10 @@ public class ChessClient implements NotificationHandler {
         if (params.length == 3) {
             var result = server.register(params[0], params[1], params[2]);
             authToken = result.authToken();
+            username = result.username();
+            ws = new WebSocketFacade("http://localhost:8080", this);
 
-            return "Registered and logged in as " + result.username();
+            return "Registered and logged in as " + username;
         }
         throw new DataAccessException("Expected: register <username> <password> <email>");
     }
@@ -115,8 +118,10 @@ public class ChessClient implements NotificationHandler {
         if (params.length == 2) {
             var result = server.login(params[0], params[1]);
             authToken = result.authToken();
+            username = result.username();
+            ws = new WebSocketFacade("http://localhost:8080", this);
 
-            return "Logged in as " + result.username();
+            return "Logged in as " + username;
         }
         throw new DataAccessException("Expected: login <username> <password>");
     }
@@ -135,8 +140,9 @@ public class ChessClient implements NotificationHandler {
         if (params.length == 1) {
             server.createGame(authToken, params[0]);
             games = server.listGames(authToken).games();
+            gameName = params[0];
 
-            return "Created game: " + params[0];
+            return "Created game: " + gameName;
         }
         throw new DataAccessException("Expected: create <gameName>");
     }
@@ -204,18 +210,15 @@ public class ChessClient implements NotificationHandler {
                 throw new DataAccessException("Error: Invalid player color");
             }
 
-            server.joinGame(authToken, playerColor, gameID);
-            ws = new WebSocketFacade("http://localhost:8080", this);
-
-            // test notifiaction
-            Notification testNotification = new Notification(Notification.Type.GAME_UPDATE, "This is a test notification!");
-            notify(testNotification);
-            ws.getSession().getAsyncRemote().sendText(
-                    new Gson().toJson(new Notification(Notification.Type.GAME_UPDATE, "This is a test notification!"))
-            );
-
             boolean isWhite = playerColor.equals("WHITE");
             Board.drawBoard(isWhite);
+
+            server.joinGame(authToken, playerColor, gameID);
+
+            Notification testNotification;
+            testNotification = new Notification(Notification.Type.GAME_UPDATE, (username + " joined Game " + gameID + " as " + playerColor));
+            notify(testNotification);
+            ws.send(testNotification);
 
             return "Joined Game " + i + " as " + playerColor;
         }
@@ -243,10 +246,23 @@ public class ChessClient implements NotificationHandler {
             int gameID = game.gameID();
 //            server.observeGame(authToken, gameID);
 
+            Notification testNotification;
+            testNotification = new Notification(Notification.Type.GAME_UPDATE, (username + " observing Game " + gameID));
+            notify(testNotification);
+            ws.send(testNotification);
+
             Board.drawBoard(true);
 
             return "Observing game " + i;
         }
         throw new DataAccessException("Expected: observe <gameID>");
+    }
+
+    public boolean isLoggedIn() {
+        return authToken != null;
+    }
+
+    public void reconnectWebSocket() throws DataAccessException {
+        ws = new WebSocketFacade("http://localhost:8080", this);
     }
 }

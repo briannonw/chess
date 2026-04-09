@@ -24,12 +24,9 @@ public class WebSocketFacade extends Endpoint {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             this.session = container.connectToServer(this, socketURI);
 
-            this.session.addMessageHandler(new MessageHandler.Whole<String>() {
-                @Override
-                public void onMessage(String message) {
-                    Notification notification = new Gson().fromJson(message, Notification.class);
-                    notificationHandler.notify(notification);
-                }
+            this.session.addMessageHandler((MessageHandler.Whole<String>) message -> {
+                Notification notification = gson.fromJson(message, Notification.class);
+                notificationHandler.notify(notification);
             });
 
         } catch (DeploymentException | IOException | URISyntaxException ex) {
@@ -44,6 +41,31 @@ public class WebSocketFacade extends Endpoint {
 
     public Session getSession() {
         return session;
+    }
+
+    public void send(Notification notification) throws DataAccessException {
+        if (session == null || !session.isOpen()) {
+            throw new DataAccessException("WebSocket connection is not open");
+        }
+
+        try {
+            String json = gson.toJson(notification);
+            session.getBasicRemote().sendText(json);
+        } catch (IOException ex) {
+            throw new DataAccessException("Failed to send notification");
+        }
+    }
+
+    @Override
+    public void onClose(Session session, CloseReason closeReason) {
+        this.session = null;
+        if (notificationHandler instanceof ChessClient chessClient && chessClient.isLoggedIn()) {
+            try {
+                chessClient.reconnectWebSocket();
+            } catch (DataAccessException ex) {
+                System.out.println("Reconnect failed: " + ex.getMessage());
+            }
+        }
     }
 
 }
