@@ -43,13 +43,13 @@ public class WebSocketFacade extends Endpoint {
         return session;
     }
 
-    public void send(Notification notification) throws DataAccessException {
+    public void send(Object message) throws DataAccessException {
         if (session == null || !session.isOpen()) {
             throw new DataAccessException("WebSocket connection is not open");
         }
 
         try {
-            String json = gson.toJson(notification);
+            String json = gson.toJson(message);
             session.getBasicRemote().sendText(json);
         } catch (IOException ex) {
             throw new DataAccessException("Failed to send notification");

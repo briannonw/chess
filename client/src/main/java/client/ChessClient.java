@@ -4,6 +4,7 @@ import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;
 import webSocketMessages.Notification;
+import websocket.commands.UserGameCommand;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ public class ChessClient implements NotificationHandler {
     private WebSocketFacade ws;
     private boolean inGame = false;
     private boolean isWhitePlayer = true;
+    private int currentGameID;
 
     @Override
     public void notify(Notification notification) {
@@ -226,6 +228,7 @@ public class ChessClient implements NotificationHandler {
             ListGamesData game = games.get(i - 1);
 
             int gameID = game.gameID();
+            currentGameID = gameID;
             String playerColor = params[1].toUpperCase();
 
             if (!playerColor.equals("WHITE") && !playerColor.equals("BLACK")) {
@@ -268,6 +271,7 @@ public class ChessClient implements NotificationHandler {
 
             ListGamesData game = games.get(i - 1);
             int gameID = game.gameID();
+            currentGameID = gameID;
 //            server.observeGame(authToken, gameID);
             inGame = true;
 
@@ -294,32 +298,46 @@ public class ChessClient implements NotificationHandler {
     private String redrawBoard(String[] params) throws DataAccessException {
         if (params.length == 0) {
             Board.drawBoard(isWhitePlayer);
-            return "";
+            return "Board redrawn";
         }
-        throw new DataAccessException("Expected: list");
+        throw new DataAccessException("Expected: redraw");
     }
 
     private String leaveGame(String[] params) throws DataAccessException {
         if (params.length == 0) {
-            return "";
+            UserGameCommand command = new UserGameCommand(
+                    UserGameCommand.CommandType.LEAVE,
+                    authToken,
+                    currentGameID
+            );
+
+            ws.send(command);
+            inGame = false;
+            currentGameID = 0;
+
+            return "Left the game";
         }
-        throw new DataAccessException("Expected: list");    }
+        throw new DataAccessException("Expected: leave");
+    }
 
     private String makeMove(String[] params) throws DataAccessException {
-        if (params.length == 0) {
-            return "";
+        if (params.length == 2) {
+            return ("Moved from " + params[0] + " to " + params[1]);
         }
-        throw new DataAccessException("Expected: list");    }
+        throw new DataAccessException("Expected: move <start> <end>");
+    }
 
     private String resignGame(String[] params) throws DataAccessException {
         if (params.length == 0) {
-            return "";
+            return "Resigned from Game " + currentGameID;
         }
-        throw new DataAccessException("Expected: list");    }
+        throw new DataAccessException("Expected: resign");
+    }
     private String highlightMoves(String[] params) throws DataAccessException {
-        if (params.length == 0) {
-            return "";
+        if (params.length == 1) {
+            return "Highlighted moves for " + params[0];
         }
-        throw new DataAccessException("Expected: list");    }
+        throw new DataAccessException("Expected: highlight <position>");
+    }
 
 }
