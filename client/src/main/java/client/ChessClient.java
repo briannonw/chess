@@ -18,6 +18,8 @@ public class ChessClient implements NotificationHandler {
     private String username = null;
     private String gameName = null;
     private WebSocketFacade ws;
+    private boolean inGame = false;
+    private boolean isWhitePlayer = true;
 
     @Override
     public void notify(Notification notification) {
@@ -66,18 +68,30 @@ public class ChessClient implements NotificationHandler {
             String[] tokens = input.split(" ");
             String cmd = (tokens.length > 0) ? tokens[0] : "help";
             String[] params = Arrays.copyOfRange(tokens, 1, tokens.length);
-            return switch (cmd) {
-                case "help" -> help();
-                case "register" -> register(params);
-                case "login" -> login(params);
-                case "logout" -> logout(params);
-                case "create" -> createGame(params);
-                case "list" -> listGames(params);
-                case "join" -> joinGame(params);
-                case "observe" -> observeGame(params);
-                case "quit" -> "quit";
-                default -> help();
-            };
+            if (!inGame) {
+                return switch (cmd) {
+                    case "help" -> help();
+                    case "register" -> register(params);
+                    case "login" -> login(params);
+                    case "logout" -> logout(params);
+                    case "create" -> createGame(params);
+                    case "list" -> listGames(params);
+                    case "join" -> joinGame(params);
+                    case "observe" -> observeGame(params);
+                    case "quit" -> "quit";
+                    default -> help();
+                };
+            } else {
+                return switch (cmd) {
+                    case "help" -> help();
+                    case "redraw" -> redrawBoard(params);
+                    case "leave" -> leaveGame(params);
+                    case "move" -> makeMove(params);
+                    case "resign" -> resignGame(params);
+                    case "highlight" -> highlightMoves(params);
+                    default -> help();
+                };
+            }
         } catch (DataAccessException ex) {
             return SET_TEXT_COLOR_RED + ex.getMessage() + RESET_TEXT_COLOR;
         }
@@ -89,6 +103,14 @@ public class ChessClient implements NotificationHandler {
                     register <username> <password> <email>
                     login <username> <password>
                     quit
+                    help""" + RESET_TEXT_COLOR;
+        } else if (inGame) {
+            return SET_TEXT_COLOR_BLUE + """
+                    redraw
+                    leave
+                    move <start> <end>
+                    resign
+                    highlight <position>
                     help""" + RESET_TEXT_COLOR;
         } else {
             return SET_TEXT_COLOR_BLUE + """
@@ -211,9 +233,11 @@ public class ChessClient implements NotificationHandler {
             }
 
             boolean isWhite = playerColor.equals("WHITE");
+            isWhitePlayer = isWhite;
             Board.drawBoard(isWhite);
 
             server.joinGame(authToken, playerColor, gameID);
+            inGame = true;
 
             Notification testNotification;
             testNotification = new Notification(Notification.Type.GAME_UPDATE, (username + " joined Game " + gameID + " as " + playerColor));
@@ -245,6 +269,7 @@ public class ChessClient implements NotificationHandler {
             ListGamesData game = games.get(i - 1);
             int gameID = game.gameID();
 //            server.observeGame(authToken, gameID);
+            inGame = true;
 
             Notification testNotification;
             testNotification = new Notification(Notification.Type.GAME_UPDATE, (username + " observing Game " + gameID));
@@ -265,4 +290,36 @@ public class ChessClient implements NotificationHandler {
     public void reconnectWebSocket() throws DataAccessException {
         ws = new WebSocketFacade("http://localhost:8080", this);
     }
+
+    private String redrawBoard(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            Board.drawBoard(isWhitePlayer);
+            return "";
+        }
+        throw new DataAccessException("Expected: list");
+    }
+
+    private String leaveGame(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            return "";
+        }
+        throw new DataAccessException("Expected: list");    }
+
+    private String makeMove(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            return "";
+        }
+        throw new DataAccessException("Expected: list");    }
+
+    private String resignGame(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            return "";
+        }
+        throw new DataAccessException("Expected: list");    }
+    private String highlightMoves(String[] params) throws DataAccessException {
+        if (params.length == 0) {
+            return "";
+        }
+        throw new DataAccessException("Expected: list");    }
+
 }
