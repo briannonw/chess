@@ -63,23 +63,37 @@ public class WebSocketHandler {
                 }
 
             } catch (Exception e) {
-                System.out.println("Error handling message: " + e.getMessage());
+                sendError(ctx, "Invalid request");
             }
         });
+    }
+
+    private void sendError(WsContext ctx, String msg) {
+        ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
+        error.setErrorMessage(msg);
+        send(ctx, error);
     }
 
     private void handleConnect(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
         int gameID = command.getGameID();
         ctx.attribute("gameID", gameID);
 
-        gameConnections.putIfAbsent(gameID, new HashSet<>());
-        gameConnections.get(gameID).add(ctx);
-
         GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            sendError(ctx, "Invalid game ID");
+            return;
+        }
         ChessGame game = gameData.game();
 
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        if (auth == null) {
+            sendError(ctx, "Invalid auth token");
+            return;
+        }
         String username = auth.username();
+
+        gameConnections.putIfAbsent(gameID, new HashSet<>());
+        gameConnections.get(gameID).add(ctx);
 
         String role;
         if (username.equals(gameData.whiteUsername()) || username.equals(gameData.blackUsername())) {
@@ -108,9 +122,17 @@ public class WebSocketHandler {
 
         int gameID = command.getGameID();
         GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            sendError(ctx, "Invalid game ID");
+            return;
+        }
         ChessGame game = gameData.game();
 
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        if (auth == null) {
+            sendError(ctx, "Invalid auth token");
+            return;
+        }
         String username = auth.username();
 
         String role = roles.get(ctx);
@@ -132,9 +154,17 @@ public class WebSocketHandler {
 
         int gameID = command.getGameID();
         GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            sendError(ctx, "Invalid game ID");
+            return;
+        }
         ChessGame game = gameData.game();
 
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        if (auth == null) {
+            sendError(ctx, "Invalid auth token");
+            return;
+        }
         String username = auth.username();
 
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
@@ -157,6 +187,10 @@ public class WebSocketHandler {
 
         int gameID = command.getGameID();
         GameData gameData = dataAccess.getGame(gameID);
+        if (gameData == null) {
+            sendError(ctx, "Invalid game ID");
+            return;
+        }
         ChessGame game = gameData.game();
 
         String role = roles.get(ctx);
@@ -181,12 +215,12 @@ public class WebSocketHandler {
             broadcast(gameID, ctx, response);
         } catch (InvalidMoveException ex) {
             ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
-            error.setMessage("Error: Invalid move");
+            error.setErrorMessage("Error: Invalid move");
             send(ctx, error);
 
         } catch (DataAccessException ex) {
             ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
-            error.setMessage("Invalid move");
+            error.setErrorMessage("Invalid move");
             send(ctx, error);
         }
     }
