@@ -329,6 +329,13 @@ public class ChessClient implements NotificationHandler {
 
     private String resignGame(String[] params) throws DataAccessException {
         if (params.length == 0) {
+            UserGameCommand command = new UserGameCommand(
+                    UserGameCommand.CommandType.RESIGN,
+                    authToken,
+                    currentGameID
+            );
+
+            ws.send(command);
             return "Resigned from Game " + currentGameID;
         }
         throw new DataAccessException("Expected: resign");
