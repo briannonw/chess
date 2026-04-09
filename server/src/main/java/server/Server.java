@@ -43,6 +43,20 @@ public class Server {
         javalin.put("/game", this::joinGame);
         javalin.delete("/db", this::clear);
 
+        javalin.ws("/ws", ws -> {
+            ws.onConnect(ctx -> {
+                System.out.println("Client connected");
+            });
+
+            ws.onMessage(ctx -> {
+                System.out.println("Received: " + ctx.message());
+            });
+
+            ws.onClose(ctx -> {
+                System.out.println("Client disconnected");
+            });
+        });
+
         javalin.exception(DataAccessException.class, this::exceptionHandler);
     }
 

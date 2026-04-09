@@ -14,6 +14,7 @@ import static ui.EscapeSequences.*;
 public class ChessClient {
     private final ServerFacade server;
     private String authToken = null;
+    private WebSocketFacade ws;
 
     public ChessClient(int port) throws DataAccessException {
         server = new ServerFacade(port);
@@ -196,6 +197,7 @@ public class ChessClient {
             }
 
             server.joinGame(authToken, playerColor, gameID);
+            ws = new WebSocketFacade("http://localhost:8080");
 
             boolean isWhite = playerColor.equals("WHITE");
             Board.drawBoard(isWhite);
