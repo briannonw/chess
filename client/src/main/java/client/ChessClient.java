@@ -1,8 +1,10 @@
 package client;
 
+import com.google.gson.Gson;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;
+import webSocketMessages.Notification;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,10 +13,16 @@ import java.util.Scanner;
 
 import static ui.EscapeSequences.*;
 
-public class ChessClient {
+public class ChessClient implements NotificationHandler {
     private final ServerFacade server;
     private String authToken = null;
     private WebSocketFacade ws;
+
+    @Override
+    public void notify(Notification notification) {
+        System.out.println(SET_TEXT_COLOR_MAGENTA + notification.message());
+        System.out.print("\n" + RESET_TEXT_COLOR);
+    }
 
     public ChessClient(int port) throws DataAccessException {
         server = new ServerFacade(port);
@@ -197,7 +205,14 @@ public class ChessClient {
             }
 
             server.joinGame(authToken, playerColor, gameID);
-            ws = new WebSocketFacade("http://localhost:8080");
+            ws = new WebSocketFacade("http://localhost:8080", this);
+
+            // test notifiaction
+            Notification testNotification = new Notification(Notification.Type.GAME_UPDATE, "This is a test notification!");
+            notify(testNotification);
+            ws.getSession().getAsyncRemote().sendText(
+                    new Gson().toJson(new Notification(Notification.Type.GAME_UPDATE, "This is a test notification!"))
+            );
 
             boolean isWhite = playerColor.equals("WHITE");
             Board.drawBoard(isWhite);

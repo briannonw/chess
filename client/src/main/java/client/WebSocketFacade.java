@@ -1,5 +1,7 @@
 package client;
 
+import com.google.gson.Gson;
+import webSocketMessages.Notification;
 import dataaccess.DataAccessException;
 import jakarta.websocket.*;
 
@@ -9,12 +11,15 @@ import java.net.URISyntaxException;
 
 public class WebSocketFacade extends Endpoint {
 
-    private Session session;
+    Session session;
+    NotificationHandler notificationHandler;
+    private final Gson gson = new Gson();
 
-    public WebSocketFacade(String url) throws DataAccessException {
+    public WebSocketFacade(String url, NotificationHandler notificationHandler) throws DataAccessException {
         try {
             url = url.replace("http", "ws");
             URI socketURI = new URI(url + "/ws");
+            this.notificationHandler = notificationHandler;
 
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             this.session = container.connectToServer(this, socketURI);
@@ -22,7 +27,8 @@ public class WebSocketFacade extends Endpoint {
             this.session.addMessageHandler(new MessageHandler.Whole<String>() {
                 @Override
                 public void onMessage(String message) {
-                    System.out.println("Received from server: " + message);
+                    Notification notification = new Gson().fromJson(message, Notification.class);
+                    notificationHandler.notify(notification);
                 }
             });
 
@@ -34,6 +40,10 @@ public class WebSocketFacade extends Endpoint {
     @Override
     public void onOpen(Session session, EndpointConfig endpointConfig) {
         System.out.println("Connected to server!");
+    }
+
+    public Session getSession() {
+        return session;
     }
 
 }
