@@ -92,13 +92,17 @@ public class WebSocketHandler {
         send(ctx, response);
     }
 
-    private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command) {
+    private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
 
         System.out.println("Handling MOVE");
 
-        ServerMessage response = new ServerMessage(ServerMessageType.NOTIFICATION);
-        response.setMessage("Move received");
+        int gameID = command.getGameID();
+        GameData gameData = dataAccess.getGame(gameID);
+        ChessGame game = gameData.game();
 
+        ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
+        response.setGame(game);
+        response.setMessage("Move received");
         send(ctx, response);
     }
 
