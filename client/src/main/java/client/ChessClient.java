@@ -1,6 +1,7 @@
 package client;
 
 import chess.ChessGame;
+import chess.InvalidMoveException;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;

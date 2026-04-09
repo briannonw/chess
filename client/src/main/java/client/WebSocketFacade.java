@@ -58,12 +58,6 @@ public class WebSocketFacade extends Endpoint {
     @Override
     public void onClose(Session session, CloseReason closeReason) {
         this.session = null;
-        if (notificationHandler instanceof ChessClient chessClient && chessClient.isLoggedIn()) {
-            try {
-                chessClient.reconnectWebSocket();
-            } catch (DataAccessException ex) {
-                System.out.println("Reconnect failed: " + ex.getMessage());
-            }
-        }
+        System.out.println("WebSocket closed: " + closeReason);
     }
 }
