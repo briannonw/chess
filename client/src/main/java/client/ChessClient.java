@@ -320,9 +320,42 @@ public class ChessClient implements NotificationHandler {
         throw new DataAccessException("Expected: leave");
     }
 
+    private int colFromLetter(char c) throws DataAccessException {
+        return switch (c) {
+            case 'a' -> 1;
+            case 'b' -> 2;
+            case 'c' -> 3;
+            case 'd' -> 4;
+            case 'e' -> 5;
+            case 'f' -> 6;
+            case 'g' -> 7;
+            case 'h' -> 8;
+            default -> throw new DataAccessException("Invalid column");
+        };
+    }
+
     private String makeMove(String[] params) throws DataAccessException {
         if (params.length == 2) {
-            return ("Moved from " + params[0] + " to " + params[1]);
+            String start = params[0];
+            String end = params[1];
+
+            int startCol = colFromLetter(start.charAt(0));
+            int startRow = Character.getNumericValue(start.charAt(1));
+            int endCol = colFromLetter(end.charAt(0));
+            int endRow = Character.getNumericValue(end.charAt(1));
+
+            chess.ChessPosition startPosition = new chess.ChessPosition(startRow, startCol);
+            chess.ChessPosition endPosition = new chess.ChessPosition(endRow, endCol);
+            chess.ChessMove move = new chess.ChessMove(startPosition, endPosition, null);
+
+            UserGameCommand command = new UserGameCommand(
+                    UserGameCommand.CommandType.MAKE_MOVE,
+                    authToken,
+                    currentGameID,
+                    move
+            );
+            ws.send(command);
+            return ("Moved from: " + start + " to " + end);
         }
         throw new DataAccessException("Expected: move <start> <end>");
     }
