@@ -10,6 +10,7 @@ import io.javalin.*;
 import io.javalin.http.Context;
 import service.*;
 import model.*;
+import websocket.WebSocketHandler;
 
 import java.util.Map;
 
@@ -32,6 +33,7 @@ public class Server {
         clearService = new ClearService(dataAccess);
         userService = new UserService(dataAccess);
         gameService = new GameService(dataAccess);
+        WebSocketHandler handler = new WebSocketHandler(dataAccess);
 
         javalin = Javalin.create(config -> config.staticFiles.add("web"));
 
@@ -42,20 +44,7 @@ public class Server {
         javalin.post("/game", this::createGame);
         javalin.put("/game", this::joinGame);
         javalin.delete("/db", this::clear);
-
-        javalin.ws("/ws", ws -> {
-            ws.onConnect(ctx -> {
-                System.out.println("Client connected");
-            });
-
-            ws.onMessage(ctx -> {
-                System.out.println("Received: " + ctx.message());
-            });
-
-            ws.onClose(ctx -> {
-                System.out.println("Client disconnected");
-            });
-        });
+        javalin.ws("/ws", handler::register);
 
         javalin.exception(DataAccessException.class, this::exceptionHandler);
     }

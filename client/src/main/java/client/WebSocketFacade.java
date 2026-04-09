@@ -1,7 +1,6 @@
 package client;
 
 import com.google.gson.Gson;
-import webSocketMessages.Notification;
 import dataaccess.DataAccessException;
 import jakarta.websocket.*;
 
@@ -24,23 +23,22 @@ public class WebSocketFacade extends Endpoint {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             this.session = container.connectToServer(this, socketURI);
 
-            this.session.addMessageHandler((MessageHandler.Whole<String>) message -> {
-                Notification notification = gson.fromJson(message, Notification.class);
-                notificationHandler.notify(notification);
-            });
-
         } catch (DeploymentException | IOException | URISyntaxException ex) {
             throw new DataAccessException(ex.getMessage(), ex);
         }
     }
 
     @Override
-    public void onOpen(Session session, EndpointConfig endpointConfig) {
+    public void onOpen(Session session, EndpointConfig config) {
         System.out.println("Connected to server!");
-    }
+        this.session = session;
 
-    public Session getSession() {
-        return session;
+        session.addMessageHandler(String.class, message -> {
+            System.out.println("RAW MESSAGE FROM SERVER: " + message); // 🔥 add this
+            if (notificationHandler instanceof ChessClient chessClient) {
+                chessClient.onServerMessage(message);
+            }
+        });
     }
 
     public void send(Object message) throws DataAccessException {
@@ -50,6 +48,7 @@ public class WebSocketFacade extends Endpoint {
 
         try {
             String json = gson.toJson(message);
+            System.out.println("Sending WS message: " + json);
             session.getBasicRemote().sendText(json);
         } catch (IOException ex) {
             throw new DataAccessException("Failed to send notification");
@@ -67,5 +66,4 @@ public class WebSocketFacade extends Endpoint {
             }
         }
     }
-
 }

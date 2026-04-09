@@ -30,6 +30,18 @@ public class ServerMessage {
         return this.serverMessageType;
     }
 
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public void setGame(ChessGame game) {
+        this.game = game;
+    }
+
     public String getMessage() {
         return this.message;
     }

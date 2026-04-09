@@ -1,5 +1,7 @@
 package chess;
 
+import dataaccess.DataAccessException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
@@ -33,6 +35,17 @@ public class ChessPiece {
         this.pieceColor = pieceColor;
         this.type = type;
 
+    }
+
+    public String getLetter(PieceType type) {
+        return switch (type) {
+            case PieceType.ROOK -> "R";
+            case PieceType.KNIGHT -> "N";
+            case PieceType.BISHOP -> "B";
+            case PieceType.KING -> "K";
+            case PieceType.QUEEN -> "Q";
+            case PieceType.PAWN -> "P";
+        };
     }
 
     /**

@@ -1,10 +1,14 @@
 package client;
 
+import chess.ChessGame;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;
 import webSocketMessages.Notification;
 import websocket.commands.UserGameCommand;
+import websocket.messages.ServerMessage;
+import com.google.gson.Gson;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,11 +26,11 @@ public class ChessClient implements NotificationHandler {
     private boolean inGame = false;
     private boolean isWhitePlayer = true;
     private int currentGameID;
+    private final Gson gson = new Gson();
 
     @Override
     public void notify(Notification notification) {
-        System.out.println(SET_TEXT_COLOR_MAGENTA + notification.message());
-        System.out.print(RESET_TEXT_COLOR);
+        System.out.println(SET_TEXT_COLOR_MAGENTA + notification.message() + RESET_TEXT_COLOR);
     }
 
     public ChessClient(int port) throws DataAccessException {
@@ -227,25 +231,26 @@ public class ChessClient implements NotificationHandler {
 
             ListGamesData game = games.get(i - 1);
 
-            int gameID = game.gameID();
-            currentGameID = gameID;
+            currentGameID = game.gameID();
             String playerColor = params[1].toUpperCase();
 
             if (!playerColor.equals("WHITE") && !playerColor.equals("BLACK")) {
                 throw new DataAccessException("Error: Invalid player color");
             }
 
-            boolean isWhite = playerColor.equals("WHITE");
-            isWhitePlayer = isWhite;
-            Board.drawBoard(isWhite);
+            isWhitePlayer = playerColor.equals("WHITE");
+//            Board.drawBoard(isWhitePlayer); change to be in loadgame
 
-            server.joinGame(authToken, playerColor, gameID);
+            server.joinGame(authToken, playerColor, currentGameID);
             inGame = true;
 
-            Notification testNotification;
-            testNotification = new Notification(Notification.Type.GAME_UPDATE, (username + " joined Game " + gameID + " as " + playerColor));
-            notify(testNotification);
-            ws.send(testNotification);
+            UserGameCommand command = new UserGameCommand(
+                    UserGameCommand.CommandType.CONNECT,
+                    authToken,
+                    currentGameID
+            );
+            ws.send(command);
+
 
             return "Joined Game " + i + " as " + playerColor;
         }
@@ -274,13 +279,14 @@ public class ChessClient implements NotificationHandler {
             currentGameID = gameID;
 //            server.observeGame(authToken, gameID);
             inGame = true;
+            isWhitePlayer = true;
 
-            Notification testNotification;
-            testNotification = new Notification(Notification.Type.GAME_UPDATE, (username + " observing Game " + gameID));
-            notify(testNotification);
-            ws.send(testNotification);
-
-            Board.drawBoard(true);
+            UserGameCommand command = new UserGameCommand(
+                    UserGameCommand.CommandType.CONNECT,
+                    authToken,
+                    currentGameID
+            );
+            ws.send(command);
 
             return "Observing game " + i;
         }
@@ -380,4 +386,37 @@ public class ChessClient implements NotificationHandler {
         throw new DataAccessException("Expected: highlight <position>");
     }
 
+    public void onServerMessage(String message) {
+        System.out.println("Received WS message: " + message); // debug
+
+        ServerMessage msg = gson.fromJson(message, ServerMessage.class);
+
+        switch (msg.getServerMessageType()) {
+            case LOAD_GAME -> handleLoadGame(msg);
+            case NOTIFICATION -> handleNotification(msg);
+            case ERROR -> handleError(msg);
+        }
+    }
+
+    private void handleLoadGame(ServerMessage msg) {
+        ChessGame game = (ChessGame) msg.getGame();
+
+        if (game == null) {
+            System.out.println(SET_TEXT_COLOR_RED + "Error: No game data received!" + RESET_TEXT_COLOR);
+            return;
+        }
+
+        Board.updateFromChessGame(game);
+        Board.drawBoard(isWhitePlayer);
+        System.out.println("Board updated!");
+    }
+
+    private void handleNotification(ServerMessage msg) {
+        Notification notification = new Notification(Notification.Type.GAME_UPDATE, msg.getMessage());
+        notify(notification);
+    }
+
+    private void handleError(ServerMessage msg) {
+        System.out.println(SET_TEXT_COLOR_RED + "Error: " + msg.getMessage() + RESET_TEXT_COLOR);
+    }
 }
