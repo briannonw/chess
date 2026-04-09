@@ -6,6 +6,7 @@ import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
 import dataaccess.MySqlDataAccess;
 import io.javalin.websocket.WsContext;
+import model.AuthData;
 import model.GameData;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
@@ -67,22 +68,25 @@ public class WebSocketHandler {
     }
 
     private void handleConnect(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
-
-        System.out.println("Handling CONNECT");
-
         int gameID = command.getGameID();
         ctx.attribute("gameID", gameID);
+
         gameConnections.putIfAbsent(gameID, new HashSet<>());
         gameConnections.get(gameID).add(ctx);
 
         GameData gameData = dataAccess.getGame(gameID);
         ChessGame game = gameData.game();
 
+        AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        String username = auth.username();
+
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
         response.setGame(game);
         response.setMessage("Game loaded");
 
         send(ctx, response);
+
+        broadcastNotification(gameID, username + " joined the game");
     }
 
     private void handleResign(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
@@ -93,10 +97,15 @@ public class WebSocketHandler {
         GameData gameData = dataAccess.getGame(gameID);
         ChessGame game = gameData.game();
 
+        AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        String username = auth.username();
+
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
         response.setGame(game);
         response.setMessage("Player resigned");
         send(ctx, response);
+
+        broadcastNotification(gameID, username + " resigned from the game");
     }
 
     private void handleLeave(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
@@ -107,12 +116,17 @@ public class WebSocketHandler {
         GameData gameData = dataAccess.getGame(gameID);
         ChessGame game = gameData.game();
 
+        AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        String username = auth.username();
+
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
         response.setGame(game);
         response.setMessage("Player left the game");
         send(ctx, response);
         removeConnection(gameID, ctx);
         ctx.closeSession();
+
+        broadcastNotification(gameID, username + " left the game");
     }
 
     private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException, InvalidMoveException {
