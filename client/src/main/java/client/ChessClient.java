@@ -28,6 +28,7 @@ public class ChessClient implements NotificationHandler {
     private boolean isWhitePlayer = true;
     private int currentGameID;
     private final Gson gson = new Gson();
+    private boolean isObserver = false;
 
     @Override
     public void notify(Notification notification) {
@@ -244,6 +245,7 @@ public class ChessClient implements NotificationHandler {
 
             server.joinGame(authToken, playerColor, currentGameID);
             inGame = true;
+            isObserver = false;
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,
@@ -281,6 +283,7 @@ public class ChessClient implements NotificationHandler {
 //            server.observeGame(authToken, gameID);
             inGame = true;
             isWhitePlayer = true;
+            isObserver = true;
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,
@@ -343,6 +346,10 @@ public class ChessClient implements NotificationHandler {
 
     private String makeMove(String[] params) throws DataAccessException {
         if (params.length == 2) {
+            if (isObserver) {
+                throw new DataAccessException("Observers can not make moves");
+            }
+
             String start = params[0];
             String end = params[1];
 
@@ -369,6 +376,10 @@ public class ChessClient implements NotificationHandler {
 
     private String resignGame(String[] params) throws DataAccessException {
         if (params.length == 0) {
+            if (isObserver) {
+                throw new DataAccessException("Observers can not resign");
+            }
+
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.RESIGN,
                     authToken,

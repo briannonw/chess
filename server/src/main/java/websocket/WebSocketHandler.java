@@ -4,7 +4,6 @@ import chess.InvalidMoveException;
 import com.google.gson.Gson;
 import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
-import dataaccess.MySqlDataAccess;
 import io.javalin.websocket.WsContext;
 import model.AuthData;
 import model.GameData;
@@ -21,6 +20,7 @@ public class WebSocketHandler {
     private final Gson gson = new Gson();
     private final DataAccess dataAccess;
     private final Map<Integer, Set<io.javalin.websocket.WsContext>> gameConnections = new HashMap<>();
+    private final Map<WsContext, String> roles = new HashMap<>();
 
     public WebSocketHandler(DataAccess dataAccess) {
         this.dataAccess = dataAccess;
@@ -36,6 +36,7 @@ public class WebSocketHandler {
         ws.onClose(ctx -> {
             System.out.println("Client disconnected");
             Integer gameID = ctx.attribute("gameID");
+            roles.remove(ctx);
             if (gameID != null) {
                 removeConnection(gameID, ctx);
             }
@@ -80,13 +81,25 @@ public class WebSocketHandler {
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
         String username = auth.username();
 
+        String role;
+        if (username.equals(gameData.whiteUsername()) || username.equals(gameData.blackUsername())) {
+            role = "PLAYER";
+        } else {
+            role = "OBSERVER";
+        }
+        roles.put(ctx, role);
+
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
         response.setGame(game);
-        response.setMessage("Game loaded");
-
         send(ctx, response);
 
-        broadcastNotification(gameID, username + " joined the game");
+        if (gameConnections.get(gameID).size() > 1) {
+            if (role.equals("PLAYER")) {
+                broadcastNotification(gameID, ctx, username + " joined the game");
+            } else {
+                broadcastNotification(gameID, ctx,username + " observing the game");
+            }
+        }
     }
 
     private void handleResign(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
@@ -100,12 +113,17 @@ public class WebSocketHandler {
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
         String username = auth.username();
 
+        String role = roles.get(ctx);
+        if (!"PLAYER".equals(role)) {
+            send(ctx, new ServerMessage(ServerMessageType.ERROR));
+            return;
+        }
+
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
         response.setGame(game);
-        response.setMessage("Player resigned");
         send(ctx, response);
 
-        broadcastNotification(gameID, username + " resigned from the game");
+        broadcastNotification(gameID, ctx, username + " resigned from the game");
     }
 
     private void handleLeave(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
@@ -121,12 +139,16 @@ public class WebSocketHandler {
 
         ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
         response.setGame(game);
-        response.setMessage("Player left the game");
         send(ctx, response);
         removeConnection(gameID, ctx);
         ctx.closeSession();
 
-        broadcastNotification(gameID, username + " left the game");
+        String role = roles.get(ctx);
+        if ("PLAYER".equals(role)) {
+            broadcastNotification(gameID, ctx, username + " left the game");
+        } else {
+            broadcastNotification(gameID, ctx, username + " stopped observing the game");
+        }
     }
 
     private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException, InvalidMoveException {
@@ -136,6 +158,12 @@ public class WebSocketHandler {
         int gameID = command.getGameID();
         GameData gameData = dataAccess.getGame(gameID);
         ChessGame game = gameData.game();
+
+        String role = roles.get(ctx);
+        if (!"PLAYER".equals(role)) {
+            send(ctx, new ServerMessage(ServerMessageType.ERROR));
+            return;
+        }
 
         try {
             game.makeMove(command.getMove());
@@ -150,8 +178,7 @@ public class WebSocketHandler {
 
             ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
             response.setGame(game);
-            response.setMessage("Move received");
-            broadcast(gameID, response);
+            broadcast(gameID, ctx, response);
         } catch (InvalidMoveException ex) {
             ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
             error.setMessage("Error: Invalid move");
@@ -170,7 +197,7 @@ public class WebSocketHandler {
         ctx.send(json);
     }
 
-    private void broadcast(int gameID, ServerMessage message) {
+    private void broadcast(int gameID, WsContext exclude, ServerMessage message) {
         String json = gson.toJson(message);
         System.out.println("Broadcasting: " + json);
 
@@ -179,6 +206,10 @@ public class WebSocketHandler {
 
             while (iterator.hasNext()) {
                 WsContext client = iterator.next();
+
+                if (client.equals(exclude)) {
+                    continue;
+                }
                 try {
                     client.send(json);
                 } catch (Exception e) {
@@ -188,10 +219,10 @@ public class WebSocketHandler {
         }
     }
 
-    private void broadcastNotification(int gameID, String text) {
+    private void broadcastNotification(int gameID, WsContext exclude, String text) {
         ServerMessage msg = new ServerMessage(ServerMessageType.NOTIFICATION);
         msg.setMessage(text);
-        broadcast(gameID, msg);
+        broadcast(gameID, exclude, msg);
     }
 
     private void removeConnection(int gameID, WsContext ctx) {
