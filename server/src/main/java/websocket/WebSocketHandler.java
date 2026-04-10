@@ -10,7 +10,11 @@ import model.GameData;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 import websocket.messages.ServerMessage.ServerMessageType;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import chess.ChessGame;
+import chess.ChessMove;
+import chess.ChessPosition;
 import java.util.*;
 
 import io.javalin.websocket.WsConfig;
@@ -57,13 +61,13 @@ public class WebSocketHandler {
 
                     case LEAVE -> handleLeave(ctx, command);
 
-                    case MAKE_MOVE -> handleMove(ctx, command);
+                    case MAKE_MOVE -> handleMove(ctx, command, message);
 
                     default -> System.out.println("Unknown command");
                 }
 
             } catch (Exception e) {
-                sendError(ctx, "Invalid request");
+                System.out.println("Error handling message: " + e.getMessage());
             }
         });
     }
@@ -75,8 +79,13 @@ public class WebSocketHandler {
     }
 
     private void handleConnect(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
+
         int gameID = command.getGameID();
         ctx.attribute("gameID", gameID);
+
+        System.out.println("ENTERED handleMove");
+        System.out.println("Move = " + command.getMove());
+        System.out.println("GameID = " + gameID);
 
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
@@ -181,48 +190,139 @@ public class WebSocketHandler {
         }
     }
 
-    private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException, InvalidMoveException {
+//    private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command, String rawJson) throws DataAccessException, InvalidMoveException {
+//
+//        int gameID = command.getGameID();
+//        GameData gameData = dataAccess.getGame(gameID);
+//        if (gameData == null) {
+//            sendError(ctx, "Invalid game ID");
+//            return;
+//        }
+//        ChessGame game = gameData.game();
+//
+//        String role = roles.get(ctx);
+//        if (!"PLAYER".equals(role)) {
+//            send(ctx, new ServerMessage(ServerMessageType.ERROR));
+//            return;
+//        }
+//
+//        try {
+//            if (command.getMove() == null) {
+//                sendError(ctx, "Move was no parsed correctly");
+//                return;
+//            }
+//            game.makeMove(command.getMove());
+//            GameData updatedGame = new GameData(
+//                    gameData.gameID(),
+//                    gameData.whiteUsername(),
+//                    gameData.blackUsername(),
+//                    gameData.gameName(),
+//                    game
+//            );
+//            dataAccess.updateGame(updatedGame);
+//
+//            ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
+//            response.setGame(game);
+//            broadcast(gameID, null, response);
+//        } catch (InvalidMoveException ex) {
+//            ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
+//            error.setErrorMessage("Error: Invalid move");
+//            send(ctx, error);
+//
+//        } catch (DataAccessException ex) {
+//            ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
+//            error.setErrorMessage("Invalid move");
+//            send(ctx, error);
+//        }
+//    }
 
-        System.out.println("Handling MOVE");
+    private void handleMove(WsContext ctx, UserGameCommand command, String rawJson)
+            throws DataAccessException {
 
         int gameID = command.getGameID();
+
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
             sendError(ctx, "Invalid game ID");
             return;
         }
+
         ChessGame game = gameData.game();
 
         String role = roles.get(ctx);
         if (!"PLAYER".equals(role)) {
-            send(ctx, new ServerMessage(ServerMessageType.ERROR));
+            sendError(ctx, "Only players can make moves");
             return;
         }
 
         try {
-            game.makeMove(command.getMove());
-            GameData updatedGame = new GameData(
+            JsonObject json = JsonParser.parseString(rawJson).getAsJsonObject();
+            JsonObject moveObj = json.getAsJsonObject("move");
+
+            JsonObject start = moveObj.getAsJsonObject("startPosition");
+            JsonObject end = moveObj.getAsJsonObject("endPosition");
+
+            int startRow = start.get("row").getAsInt();
+            int startCol = start.get("col").getAsInt();
+            int endRow = end.get("row").getAsInt();
+            int endCol = end.get("col").getAsInt();
+
+            ChessPosition startPos = new ChessPosition(startRow, startCol);
+            ChessPosition endPos = new ChessPosition(endRow, endCol);
+
+            ChessMove move = new ChessMove(startPos, endPos, null);
+
+            game.makeMove(move); // ONLY this should trigger InvalidMove
+
+            GameData updated = new GameData(
                     gameData.gameID(),
                     gameData.whiteUsername(),
                     gameData.blackUsername(),
                     gameData.gameName(),
                     game
             );
-            dataAccess.updateGame(updatedGame);
+            dataAccess.updateGame(updated);
 
             ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
             response.setGame(game);
+            send(ctx, response);
             broadcast(gameID, ctx, response);
-        } catch (InvalidMoveException ex) {
-            ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
-            error.setErrorMessage("Error: Invalid move");
-            send(ctx, error);
 
-        } catch (DataAccessException ex) {
-            ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
-            error.setErrorMessage("Invalid move");
-            send(ctx, error);
+            AuthData auth = dataAccess.getAuth(command.getAuthToken());
+            if (auth == null) {
+                sendError(ctx, "Invalid auth token");
+                return;
+            }
+            String username = auth.username();
+            String startString = toChessFormat(startRow, startCol);
+            String endString = toChessFormat(endRow, endCol);
+
+            broadcastNotification(gameID, ctx, username + " moved a piece from " + startString + " to " + endString);
+
+        } catch (InvalidMoveException e) {
+            sendError(ctx, "Invalid move"); // ✅ correct
+
+        } catch (DataAccessException e) {
+            sendError(ctx, "Server error"); // ✅ different message
+
+        } catch (Exception e) {
+            sendError(ctx, "Invalid request"); // ✅ parsing/etc
         }
+    }
+
+    private String toChessFormat(int row, int col) throws DataAccessException {
+        String letters =  switch (col) {
+            case 1 -> "a";
+            case 2 -> "b";
+            case 3 -> "c";
+            case 4 -> "d";
+            case 5 -> "e";
+            case 6 -> "f";
+            case 7 -> "g";
+            case 8 -> "h";
+            default -> throw new DataAccessException("Invalid column");
+        };
+        return letters + row;
     }
 
     private void send(io.javalin.websocket.WsContext ctx, ServerMessage message) {
