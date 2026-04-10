@@ -190,52 +190,6 @@ public class WebSocketHandler {
         }
     }
 
-//    private void handleMove(io.javalin.websocket.WsContext ctx, UserGameCommand command, String rawJson) throws DataAccessException, InvalidMoveException {
-//
-//        int gameID = command.getGameID();
-//        GameData gameData = dataAccess.getGame(gameID);
-//        if (gameData == null) {
-//            sendError(ctx, "Invalid game ID");
-//            return;
-//        }
-//        ChessGame game = gameData.game();
-//
-//        String role = roles.get(ctx);
-//        if (!"PLAYER".equals(role)) {
-//            send(ctx, new ServerMessage(ServerMessageType.ERROR));
-//            return;
-//        }
-//
-//        try {
-//            if (command.getMove() == null) {
-//                sendError(ctx, "Move was no parsed correctly");
-//                return;
-//            }
-//            game.makeMove(command.getMove());
-//            GameData updatedGame = new GameData(
-//                    gameData.gameID(),
-//                    gameData.whiteUsername(),
-//                    gameData.blackUsername(),
-//                    gameData.gameName(),
-//                    game
-//            );
-//            dataAccess.updateGame(updatedGame);
-//
-//            ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
-//            response.setGame(game);
-//            broadcast(gameID, null, response);
-//        } catch (InvalidMoveException ex) {
-//            ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
-//            error.setErrorMessage("Error: Invalid move");
-//            send(ctx, error);
-//
-//        } catch (DataAccessException ex) {
-//            ServerMessage error = new ServerMessage(ServerMessageType.ERROR);
-//            error.setErrorMessage("Invalid move");
-//            send(ctx, error);
-//        }
-//    }
-
     private void handleMove(WsContext ctx, UserGameCommand command, String rawJson)
             throws DataAccessException {
 
@@ -246,8 +200,14 @@ public class WebSocketHandler {
             sendError(ctx, "Invalid game ID");
             return;
         }
-
         ChessGame game = gameData.game();
+
+        AuthData auth = dataAccess.getAuth(command.getAuthToken());
+        if (auth == null) {
+            sendError(ctx, "Invalid auth token");
+            return;
+        }
+        String username = auth.username();
 
         String role = roles.get(ctx);
         if (!"PLAYER".equals(role)) {
@@ -272,7 +232,17 @@ public class WebSocketHandler {
 
             ChessMove move = new ChessMove(startPos, endPos, null);
 
-            game.makeMove(move); // ONLY this should trigger InvalidMove
+            ChessGame.TeamColor opponent;
+            ChessGame.TeamColor player;
+            if (game.getTeamTurn() == ChessGame.TeamColor.WHITE) {
+                opponent = ChessGame.TeamColor.BLACK;
+                player = ChessGame.TeamColor.WHITE;
+            } else {
+                opponent = ChessGame.TeamColor.WHITE;
+                player = ChessGame.TeamColor.BLACK;
+            }
+
+            game.makeMove(move);
 
             GameData updated = new GameData(
                     gameData.gameID(),
@@ -288,25 +258,42 @@ public class WebSocketHandler {
             send(ctx, response);
             broadcast(gameID, ctx, response);
 
-            AuthData auth = dataAccess.getAuth(command.getAuthToken());
-            if (auth == null) {
-                sendError(ctx, "Invalid auth token");
-                return;
-            }
-            String username = auth.username();
             String startString = toChessFormat(startRow, startCol);
             String endString = toChessFormat(endRow, endCol);
 
             broadcastNotification(gameID, ctx, username + " moved a piece from " + startString + " to " + endString);
 
+            if (game.isInCheckmate(opponent)) {
+                if (game.isInCheckmate(opponent)) {
+                    String msg = "Checkmate! " + player + " won.";
+
+                    ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
+                    notification.setMessage(msg);
+                    send(ctx, notification);
+
+                    broadcastNotification(gameID, ctx, msg);
+                    return;
+                }
+            }
+
+            if (game.isInCheck(opponent)) {
+                String msg = opponent + " is in check.";
+
+                ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
+                notification.setMessage(msg);
+                send(ctx, notification);
+
+                broadcastNotification(gameID, ctx, msg);
+            }
+
         } catch (InvalidMoveException e) {
-            sendError(ctx, "Invalid move"); // ✅ correct
+            sendError(ctx, "Invalid move");
 
         } catch (DataAccessException e) {
-            sendError(ctx, "Server error"); // ✅ different message
+            sendError(ctx, "Server error");
 
         } catch (Exception e) {
-            sendError(ctx, "Invalid request"); // ✅ parsing/etc
+            sendError(ctx, "Invalid request");
         }
     }
 
