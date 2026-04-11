@@ -162,15 +162,12 @@ public class WebSocketHandler {
 
     private void handleLeave(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
 
-        System.out.println("Handling LEAVE");
-
         int gameID = command.getGameID();
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
             sendError(ctx, "Invalid game ID");
             return;
         }
-        ChessGame game = gameData.game();
 
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
         if (auth == null) {
@@ -179,18 +176,42 @@ public class WebSocketHandler {
         }
         String username = auth.username();
 
-        ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
-        response.setGame(game);
-        send(ctx, response);
-        removeConnection(gameID, ctx);
-        ctx.closeSession();
-
         String role = roles.get(ctx);
+
+        if ("PLAYER".equals(role)) {
+            String whiteUser = gameData.whiteUsername();
+            String blackUser = gameData.blackUsername();
+
+            String newWhiteUser = whiteUser;
+            String newBlackUser = blackUser;
+
+            if (username.equals(whiteUser)) {
+                newWhiteUser = null;
+            } else if (username.equals(blackUser)) {
+                newBlackUser = null;
+            }
+
+            GameData updated = new GameData(
+                    gameData.gameID(),
+                    newWhiteUser,
+                    newBlackUser,
+                    gameData.gameName(),
+                    gameData.game()
+            );
+
+            dataAccess.updateGame(updated);
+        }
+
+        removeConnection(gameID, ctx);
+        roles.remove(ctx);
+
         if ("PLAYER".equals(role)) {
             broadcastNotification(gameID, ctx, username + " left the game");
         } else {
             broadcastNotification(gameID, ctx, username + " stopped observing the game");
         }
+
+        ctx.closeSession();
     }
 
     private void handleMove(WsContext ctx, UserGameCommand command, String rawJson)
