@@ -1,6 +1,6 @@
 package websocket;
 
-import chess.InvalidMoveException;
+import chess.*;
 import com.google.gson.Gson;
 import dataaccess.DataAccess;
 import dataaccess.DataAccessException;
@@ -12,9 +12,7 @@ import websocket.messages.ServerMessage;
 import websocket.messages.ServerMessage.ServerMessageType;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import chess.ChessGame;
-import chess.ChessMove;
-import chess.ChessPosition;
+
 import java.util.*;
 
 import io.javalin.websocket.WsConfig;
@@ -25,6 +23,7 @@ public class WebSocketHandler {
     private final DataAccess dataAccess;
     private final Map<Integer, Set<io.javalin.websocket.WsContext>> gameConnections = new HashMap<>();
     private final Map<WsContext, String> roles = new HashMap<>();
+    private final Set<Integer> resignedGames = new HashSet<>();
 
     public WebSocketHandler(DataAccess dataAccess) {
         this.dataAccess = dataAccess;
@@ -127,15 +126,17 @@ public class WebSocketHandler {
 
     private void handleResign(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
 
-        System.out.println("Handling RESIGN");
-
         int gameID = command.getGameID();
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
             sendError(ctx, "Invalid game ID");
             return;
         }
-        ChessGame game = gameData.game();
+
+        if (resignedGames.contains(gameID)) {
+            sendError(ctx, "Game is over");
+            return;
+        }
 
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
         if (auth == null) {
@@ -146,13 +147,15 @@ public class WebSocketHandler {
 
         String role = roles.get(ctx);
         if (!"PLAYER".equals(role)) {
-            send(ctx, new ServerMessage(ServerMessageType.ERROR));
+            sendError(ctx, "Only players can resign");
             return;
         }
 
-        ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
-        response.setGame(game);
-        send(ctx, response);
+        resignedGames.add(gameID);
+
+        ServerMessage msg = new ServerMessage(ServerMessageType.NOTIFICATION);
+        msg.setMessage(username + " resigned from the game");
+        send(ctx, msg);
 
         broadcastNotification(gameID, ctx, username + " resigned from the game");
     }
@@ -202,6 +205,11 @@ public class WebSocketHandler {
         }
         ChessGame game = gameData.game();
 
+        if (resignedGames.contains(gameID)) {
+            sendError(ctx, "Game is over");
+            return;
+        }
+
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
         if (auth == null) {
             sendError(ctx, "Invalid auth token");
@@ -240,6 +248,20 @@ public class WebSocketHandler {
             } else {
                 opponent = ChessGame.TeamColor.WHITE;
                 player = ChessGame.TeamColor.BLACK;
+            }
+
+            ChessGame.TeamColor userColor;
+            if (username.equals(gameData.whiteUsername())) {
+                userColor = ChessGame.TeamColor.WHITE;
+            } else {
+                userColor = ChessGame.TeamColor.BLACK;
+            }
+
+            ChessPiece piece = game.getBoard().getPiece(startPos);
+
+            if (piece == null || piece.getTeamColor() != userColor) {
+                sendError(ctx, "Cannot move opponent's piece");
+                return;
             }
 
             game.makeMove(move);
