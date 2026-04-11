@@ -30,11 +30,9 @@ public class WebSocketFacade extends Endpoint {
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {
-        System.out.println("Connected to server!");
         this.session = session;
 
         session.addMessageHandler(String.class, message -> {
-            System.out.println("RAW MESSAGE FROM SERVER: " + message); // 🔥 add this
             if (notificationHandler instanceof ChessClient chessClient) {
                 chessClient.onServerMessage(message);
             }
@@ -48,7 +46,6 @@ public class WebSocketFacade extends Endpoint {
 
         try {
             String json = gson.toJson(message);
-            System.out.println("Sending WS message: " + json);
             session.getBasicRemote().sendText(json);
         } catch (IOException ex) {
             throw new DataAccessException("Failed to send notification");
@@ -58,6 +55,11 @@ public class WebSocketFacade extends Endpoint {
     @Override
     public void onClose(Session session, CloseReason closeReason) {
         this.session = null;
-        System.out.println("WebSocket closed: " + closeReason);
+    }
+
+    public void close() throws IOException {
+        if (session != null && session.isOpen()) {
+            session.close();
+        }
     }
 }

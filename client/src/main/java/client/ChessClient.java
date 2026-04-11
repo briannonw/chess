@@ -2,7 +2,6 @@ package client;
 
 import chess.ChessGame;
 import chess.ChessPosition;
-import chess.InvalidMoveException;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;
@@ -11,7 +10,7 @@ import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 import com.google.gson.Gson;
 
-
+import java.io.IOException;
 import java.util.*;
 
 import static ui.EscapeSequences.*;
@@ -33,7 +32,7 @@ public class ChessClient implements NotificationHandler {
         System.out.println(SET_TEXT_COLOR_MAGENTA + notification.message() + RESET_TEXT_COLOR);
     }
 
-    public ChessClient(int port) throws DataAccessException {
+    public ChessClient(int port) {
         server = new ServerFacade(port);
     }
 
@@ -45,12 +44,13 @@ public class ChessClient implements NotificationHandler {
         var result = "";
 
         while(!result.equals("quit")) {
+            System.out.println();
             printPrompt();
             String line = scanner.nextLine();
 
             try {
                 result = eval(line);
-                if (!result.equals("quit")) {
+                if (!result.equals("quit") && !result.isEmpty()) {
                     System.out.print(result);
                 }
             } catch (Throwable e) {
@@ -62,11 +62,17 @@ public class ChessClient implements NotificationHandler {
     }
 
     private void printPrompt() {
-        if (authToken == null) {
-            System.out.print("\n[LOGGED_OUT] >>> ");
+        String state;
+
+        if (inGame) {
+            state = "[IN_GAME]";
+        } else if (authToken == null) {
+            state = "[LOGGED_OUT]";
         } else {
-            System.out.print("\n[LOGGED_IN] >>> ");
+            state = "[LOGGED_IN]";
         }
+
+        System.out.print(state + " >>> ");
     }
 
     public String eval(String input) {
@@ -98,7 +104,7 @@ public class ChessClient implements NotificationHandler {
                     default -> help();
                 };
             }
-        } catch (DataAccessException ex) {
+        } catch (DataAccessException | IOException ex) {
             return SET_TEXT_COLOR_RED + ex.getMessage() + RESET_TEXT_COLOR;
         }
     }
@@ -135,7 +141,6 @@ public class ChessClient implements NotificationHandler {
             var result = server.register(params[0], params[1], params[2]);
             authToken = result.authToken();
             username = result.username();
-            ws = new WebSocketFacade("http://localhost:8080", this);
 
             return "Registered and logged in as " + username;
         }
@@ -147,7 +152,6 @@ public class ChessClient implements NotificationHandler {
             var result = server.login(params[0], params[1]);
             authToken = result.authToken();
             username = result.username();
-            ws = new WebSocketFacade("http://localhost:8080", this);
 
             return "Logged in as " + username;
         }
@@ -239,11 +243,12 @@ public class ChessClient implements NotificationHandler {
             }
 
             isWhitePlayer = playerColor.equals("WHITE");
-//            Board.drawBoard(isWhitePlayer); change to be in loadgame
 
             server.joinGame(authToken, playerColor, currentGameID);
             inGame = true;
             isObserver = false;
+
+            ws = new WebSocketFacade("http://localhost:8080", this);
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,
@@ -252,8 +257,7 @@ public class ChessClient implements NotificationHandler {
             );
             ws.send(command);
 
-
-            return "Joined Game " + i + " as " + playerColor;
+            return "Joined Game " + i + " as " + playerColor.toLowerCase();
         }
         throw new DataAccessException("Expected: join <gameID> <WHITE|BLACK>");
     }
@@ -278,10 +282,10 @@ public class ChessClient implements NotificationHandler {
             ListGamesData game = games.get(i - 1);
             int gameID = game.gameID();
             currentGameID = gameID;
-//            server.observeGame(authToken, gameID);
             inGame = true;
             isWhitePlayer = true;
             isObserver = true;
+            ws = new WebSocketFacade("http://localhost:8080", this);
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,
@@ -295,23 +299,16 @@ public class ChessClient implements NotificationHandler {
         throw new DataAccessException("Expected: observe <gameID>");
     }
 
-    public boolean isLoggedIn() {
-        return authToken != null;
-    }
-
-    public void reconnectWebSocket() throws DataAccessException {
-        ws = new WebSocketFacade("http://localhost:8080", this);
-    }
-
     private String redrawBoard(String[] params) throws DataAccessException {
         if (params.length == 0) {
+            Board.clearHighlightedSquares();
             Board.drawBoard(isWhitePlayer);
             return "Board redrawn";
         }
         throw new DataAccessException("Expected: redraw");
     }
 
-    private String leaveGame(String[] params) throws DataAccessException {
+    private String leaveGame(String[] params) throws DataAccessException, IOException {
         if (params.length == 0) {
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.LEAVE,
@@ -323,7 +320,12 @@ public class ChessClient implements NotificationHandler {
             inGame = false;
             currentGameID = 0;
 
-            return "Left the game";
+            if (ws != null) {
+                ws.close();
+                ws = null;
+            }
+
+            return "You left the game";
         }
         throw new DataAccessException("Expected: leave");
     }
@@ -359,6 +361,7 @@ public class ChessClient implements NotificationHandler {
             chess.ChessPosition startPosition = new chess.ChessPosition(startRow, startCol);
             chess.ChessPosition endPosition = new chess.ChessPosition(endRow, endCol);
             chess.ChessMove move = new chess.ChessMove(startPosition, endPosition, null);
+            Board.clearHighlightedSquares();
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.MAKE_MOVE,
@@ -379,7 +382,7 @@ public class ChessClient implements NotificationHandler {
             }
 
             System.out.println("Are you sure you want to resign? (yes/no): ");
-
+            System.out.print(">>> ");
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine().trim().toLowerCase();
 
@@ -419,6 +422,7 @@ public class ChessClient implements NotificationHandler {
                 highlightedMoves.add(move.getEndPosition());
             }
 
+            Board.setSelectedSquare(position);
             Board.setHighlightedSquares(highlightedMoves);
             Board.drawBoard(isWhitePlayer);
 
@@ -428,7 +432,6 @@ public class ChessClient implements NotificationHandler {
     }
 
     public void onServerMessage(String message) {
-        System.out.println("Received WS message: " + message); // debug
 
         ServerMessage msg = gson.fromJson(message, ServerMessage.class);
 
@@ -447,17 +450,25 @@ public class ChessClient implements NotificationHandler {
             return;
         }
 
+        inGame = true;
+        System.out.println();
+
         Board.updateFromChessGame(game);
         Board.drawBoard(isWhitePlayer);
         System.out.println("Board updated!");
+        printPrompt();
     }
 
     private void handleNotification(ServerMessage msg) {
-        Notification notification = new Notification(Notification.Type.GAME_UPDATE, msg.getErrorMessage());
+        System.out.println();
+        Notification notification = new Notification(Notification.Type.GAME_UPDATE, msg.getMessage());
         notify(notification);
+        printPrompt();
     }
 
     private void handleError(ServerMessage msg) {
+        System.out.println();
         System.out.println(SET_TEXT_COLOR_RED + "Error: " + msg.getErrorMessage() + RESET_TEXT_COLOR);
+        printPrompt();
     }
 }

@@ -15,6 +15,7 @@ public class Board {
         currentGame = game;
     }
     private static Set<ChessPosition> highlightedSquares = new HashSet<>();
+    private static ChessPosition selectedSquare = null;
 
     public static void drawBoard(boolean isWhite) {
         if (currentGame == null) {
@@ -24,12 +25,27 @@ public class Board {
         }
     }
 
+    private static ChessPosition displayPosition(ChessPosition pos, boolean isWhite) {
+        if (isWhite) return pos;
+
+        return new ChessPosition(pos.getRow(), 9 - pos.getColumn());
+    }
+
     public static ChessGame getCurrentGame() {
         return currentGame;
     }
 
     public static void setHighlightedSquares(Set<ChessPosition> squares) {
         highlightedSquares = squares;
+    }
+
+    public static void clearHighlightedSquares() {
+        highlightedSquares.clear();
+        selectedSquare = null;
+    }
+
+    public static void setSelectedSquare(ChessPosition pos) {
+        selectedSquare = pos;
     }
 
     private static void drawUpdatedBoard(boolean isWhite) {
@@ -55,9 +71,13 @@ public class Board {
 
             for (int col = 0; col < 8; col++) {
                 ChessPosition pos = new ChessPosition(row, col + 1);
+                pos = displayPosition(pos, isWhite);
                 boolean isHighlighted = highlightedSquares.contains(pos);
+                boolean isSelected = selectedSquare != null && selectedSquare.equals(pos);
 
-                if (isHighlighted) {
+                if (isSelected) {
+                    System.out.print(SET_BG_COLOR_MAGENTA);
+                } else if (isHighlighted) {
                     System.out.print(SET_BG_COLOR_YELLOW);
                 } else if (whiteSquare) {
                     System.out.print(SET_BG_COLOR_WHITE);
@@ -66,7 +86,7 @@ public class Board {
                 }
                 whiteSquare = !whiteSquare;
 
-                chess.ChessPiece chessPiece = currentGame.getBoard().getPiece(new ChessPosition(row, col + 1));
+                chess.ChessPiece chessPiece = currentGame.getBoard().getPiece(pos);
 
                 if (chessPiece != null) {
                     String letter = chessPiece.getLetter(chessPiece.getPieceType());

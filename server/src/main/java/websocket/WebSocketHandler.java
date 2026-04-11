@@ -33,11 +33,9 @@ public class WebSocketHandler {
 
         ws.onConnect(ctx -> {
             ctx.session.setIdleTimeout(java.time.Duration.ofMinutes(5));
-            System.out.println("Client connected");
         });
 
         ws.onClose(ctx -> {
-            System.out.println("Client disconnected");
             Integer gameID = ctx.attribute("gameID");
             roles.remove(ctx);
             if (gameID != null) {
@@ -47,7 +45,6 @@ public class WebSocketHandler {
 
         ws.onMessage(ctx -> {
             String message = ctx.message();
-            System.out.println("Received: " + message);
 
             try {
                 UserGameCommand command = gson.fromJson(message, UserGameCommand.class);
@@ -81,10 +78,6 @@ public class WebSocketHandler {
 
         int gameID = command.getGameID();
         ctx.attribute("gameID", gameID);
-
-        System.out.println("ENTERED handleMove");
-        System.out.println("Move = " + command.getMove());
-        System.out.println("GameID = " + gameID);
 
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
@@ -122,7 +115,7 @@ public class WebSocketHandler {
 
         if (gameConnections.get(gameID).size() > 1) {
             if (role.equals("PLAYER")) {
-                broadcastNotification(gameID, ctx, username + " joined the game as " + userColor);
+                broadcastNotification(gameID, ctx, username + " joined the game as " + userColor.toString().toLowerCase());
             } else {
                 broadcastNotification(gameID, ctx,username + " observing the game");
             }
@@ -207,16 +200,14 @@ public class WebSocketHandler {
             dataAccess.updateGame(updated);
         }
 
-        removeConnection(gameID, ctx);
-        roles.remove(ctx);
-
         if ("PLAYER".equals(role)) {
             broadcastNotification(gameID, ctx, username + " left the game");
         } else {
             broadcastNotification(gameID, ctx, username + " stopped observing the game");
         }
 
-        ctx.closeSession();
+        removeConnection(gameID, ctx);
+        roles.remove(ctx);
     }
 
     private void handleMove(WsContext ctx, UserGameCommand command, String rawJson)
@@ -267,26 +258,32 @@ public class WebSocketHandler {
             ChessMove move = new ChessMove(startPos, endPos, null);
 
             ChessGame.TeamColor opponent;
-            ChessGame.TeamColor player;
             if (game.getTeamTurn() == ChessGame.TeamColor.WHITE) {
                 opponent = ChessGame.TeamColor.BLACK;
-                player = ChessGame.TeamColor.WHITE;
             } else {
                 opponent = ChessGame.TeamColor.WHITE;
-                player = ChessGame.TeamColor.BLACK;
             }
 
             ChessGame.TeamColor userColor;
             if (username.equals(gameData.whiteUsername())) {
                 userColor = ChessGame.TeamColor.WHITE;
+
             } else {
                 userColor = ChessGame.TeamColor.BLACK;
             }
 
             ChessPiece piece = game.getBoard().getPiece(startPos);
 
-            if (piece == null || piece.getTeamColor() != userColor) {
+            if (piece == null) {
+                sendError(ctx, "No piece selected");
+                return;
+            } else if (piece.getTeamColor() != userColor) {
                 sendError(ctx, "Cannot move opponent's piece");
+                return;
+            }
+
+            if (game.getTeamTurn() != userColor) {
+                sendError(ctx, "Not " + userColor.toString().toLowerCase() + "'s turn");
                 return;
             }
 
@@ -318,7 +315,7 @@ public class WebSocketHandler {
                 String msg;
 
                 if (game.isInCheckmate(opponent)) {
-                    msg = "Checkmate! " + player + " won.";
+                    msg = "Checkmate! " + username + " won.";
                 } else {
                     msg = "Stalemate! Draw game.";
                 }
@@ -332,7 +329,13 @@ public class WebSocketHandler {
             }
 
             if (game.isInCheck(opponent)) {
-                String msg = opponent + " is in check.";
+                String opponentUsername;
+                if (opponent == ChessGame.TeamColor.BLACK) {
+                    opponentUsername = gameData.blackUsername();
+                } else {
+                    opponentUsername = gameData.whiteUsername();
+                }
+                String msg = opponentUsername + " is in check.";
 
                 ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
                 notification.setMessage(msg);
@@ -369,13 +372,11 @@ public class WebSocketHandler {
 
     private void send(io.javalin.websocket.WsContext ctx, ServerMessage message) {
         String json = gson.toJson(message);
-        System.out.println("Sending: " + json);
         ctx.send(json);
     }
 
     private void broadcast(int gameID, WsContext exclude, ServerMessage message) {
         String json = gson.toJson(message);
-        System.out.println("Broadcasting: " + json);
 
         if (gameConnections.containsKey(gameID)) {
             Iterator<WsContext> iterator = gameConnections.get(gameID).iterator();
