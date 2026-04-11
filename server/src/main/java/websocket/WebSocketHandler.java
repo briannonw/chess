@@ -123,29 +123,21 @@ public class WebSocketHandler {
     }
 
     private void handleResign(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
-
         int gameID = command.getGameID();
-        GameData gameData = dataAccess.getGame(gameID);
-        if (gameData == null) {
-            sendError(ctx, "Invalid game ID");
+
+        String username = validateAction(ctx, command, gameID);
+        if (username == null) {
+            return;
+        }
+
+        String role = roles.get(ctx);
+        if (!"PLAYER".equals(role)) {
+            sendError(ctx, "Only players can resign");
             return;
         }
 
         if (finishedGames.contains(gameID)) {
             sendError(ctx, "Game is over");
-            return;
-        }
-
-        AuthData auth = dataAccess.getAuth(command.getAuthToken());
-        if (auth == null) {
-            sendError(ctx, "Invalid auth token");
-            return;
-        }
-        String username = auth.username();
-
-        String role = roles.get(ctx);
-        if (!"PLAYER".equals(role)) {
-            sendError(ctx, "Only players can resign");
             return;
         }
 
@@ -158,21 +150,30 @@ public class WebSocketHandler {
         broadcastNotification(gameID, ctx, username + " resigned from the game");
     }
 
-    private void handleLeave(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
-
-        int gameID = command.getGameID();
+    private String validateAction(WsContext ctx, UserGameCommand command, int gameID) throws DataAccessException {
         GameData gameData = dataAccess.getGame(gameID);
         if (gameData == null) {
             sendError(ctx, "Invalid game ID");
-            return;
+            return null;
         }
 
         AuthData auth = dataAccess.getAuth(command.getAuthToken());
         if (auth == null) {
             sendError(ctx, "Invalid auth token");
+            return null;
+        }
+
+        return auth.username();
+    }
+
+    private void handleLeave(io.javalin.websocket.WsContext ctx, UserGameCommand command) throws DataAccessException {
+        int gameID = command.getGameID();
+        GameData gameData = dataAccess.getGame(gameID);
+
+        String username = validateAction(ctx, command, gameID);
+        if (username == null) {
             return;
         }
-        String username = auth.username();
 
         String role = roles.get(ctx);
 
@@ -213,10 +214,9 @@ public class WebSocketHandler {
     private void handleMove(WsContext ctx, UserGameCommand command, String rawJson) throws DataAccessException {
 
         int gameID = command.getGameID();
-
         GameData gameData = dataAccess.getGame(gameID);
-        if (gameData == null) {
-            sendError(ctx, "Invalid game ID");
+        String username = validateAction(ctx, command, gameID);
+        if (username == null) {
             return;
         }
 
@@ -224,13 +224,6 @@ public class WebSocketHandler {
             sendError(ctx, "Game is over");
             return;
         }
-
-        AuthData auth = dataAccess.getAuth(command.getAuthToken());
-        if (auth == null) {
-            sendError(ctx, "Invalid auth token");
-            return;
-        }
-        String username = auth.username();
 
         String role = roles.get(ctx);
         if (!"PLAYER".equals(role)) {
