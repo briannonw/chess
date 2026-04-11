@@ -23,7 +23,7 @@ public class WebSocketHandler {
     private final DataAccess dataAccess;
     private final Map<Integer, Set<io.javalin.websocket.WsContext>> gameConnections = new HashMap<>();
     private final Map<WsContext, String> roles = new HashMap<>();
-    private final Set<Integer> resignedGames = new HashSet<>();
+    private final Set<Integer> finishedGames = new HashSet<>();
 
     public WebSocketHandler(DataAccess dataAccess) {
         this.dataAccess = dataAccess;
@@ -104,8 +104,13 @@ public class WebSocketHandler {
         gameConnections.get(gameID).add(ctx);
 
         String role;
-        if (username.equals(gameData.whiteUsername()) || username.equals(gameData.blackUsername())) {
+        ChessGame.TeamColor userColor = null;
+        if (username.equals(gameData.whiteUsername())) {
             role = "PLAYER";
+            userColor = ChessGame.TeamColor.WHITE;
+        } else if (username.equals(gameData.blackUsername())) {
+            role = "PLAYER";
+            userColor = ChessGame.TeamColor.BLACK;
         } else {
             role = "OBSERVER";
         }
@@ -117,7 +122,7 @@ public class WebSocketHandler {
 
         if (gameConnections.get(gameID).size() > 1) {
             if (role.equals("PLAYER")) {
-                broadcastNotification(gameID, ctx, username + " joined the game");
+                broadcastNotification(gameID, ctx, username + " joined the game as " + userColor);
             } else {
                 broadcastNotification(gameID, ctx,username + " observing the game");
             }
@@ -133,7 +138,7 @@ public class WebSocketHandler {
             return;
         }
 
-        if (resignedGames.contains(gameID)) {
+        if (finishedGames.contains(gameID)) {
             sendError(ctx, "Game is over");
             return;
         }
@@ -151,7 +156,7 @@ public class WebSocketHandler {
             return;
         }
 
-        resignedGames.add(gameID);
+        finishedGames.add(gameID);
 
         ServerMessage msg = new ServerMessage(ServerMessageType.NOTIFICATION);
         msg.setMessage(username + " resigned from the game");
@@ -226,7 +231,7 @@ public class WebSocketHandler {
         }
         ChessGame game = gameData.game();
 
-        if (resignedGames.contains(gameID)) {
+        if (finishedGames.contains(gameID)) {
             sendError(ctx, "Game is over");
             return;
         }
@@ -306,17 +311,24 @@ public class WebSocketHandler {
 
             broadcastNotification(gameID, ctx, username + " moved a piece from " + startString + " to " + endString);
 
-            if (game.isInCheckmate(opponent)) {
+            if (game.isInCheckmate(opponent) || game.isInStalemate(opponent)) {
+
+                finishedGames.add(gameID);
+
+                String msg;
+
                 if (game.isInCheckmate(opponent)) {
-                    String msg = "Checkmate! " + player + " won.";
-
-                    ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
-                    notification.setMessage(msg);
-                    send(ctx, notification);
-
-                    broadcastNotification(gameID, ctx, msg);
-                    return;
+                    msg = "Checkmate! " + player + " won.";
+                } else {
+                    msg = "Stalemate! Draw game.";
                 }
+
+                ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
+                notification.setMessage(msg);
+                send(ctx, notification);
+
+                broadcastNotification(gameID, ctx, msg);
+                return;
             }
 
             if (game.isInCheck(opponent)) {

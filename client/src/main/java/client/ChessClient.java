@@ -1,6 +1,7 @@
 package client;
 
 import chess.ChessGame;
+import chess.ChessPosition;
 import chess.InvalidMoveException;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
@@ -11,10 +12,7 @@ import websocket.messages.ServerMessage;
 import com.google.gson.Gson;
 
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 import static ui.EscapeSequences.*;
 
@@ -380,6 +378,15 @@ public class ChessClient implements NotificationHandler {
                 throw new DataAccessException("Observers can not resign");
             }
 
+            System.out.println("Are you sure you want to resign? (yes/no): ");
+
+            Scanner scanner = new Scanner(System.in);
+            String input = scanner.nextLine().trim().toLowerCase();
+
+            if (!input.equals("yes")) {
+                return "Resign cancelled";
+            }
+
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.RESIGN,
                     authToken,
@@ -393,6 +400,28 @@ public class ChessClient implements NotificationHandler {
     }
     private String highlightMoves(String[] params) throws DataAccessException {
         if (params.length == 1) {
+
+            String start = params[0];
+            int col = colFromLetter(start.charAt(0));
+            int row = Character.getNumericValue(start.charAt(1));
+            ChessPosition position = new ChessPosition(row, col);
+
+            ChessGame game = Board.getCurrentGame();
+
+            if (game == null) {
+                throw new DataAccessException("Game not loaded");
+            }
+
+            var moves = game.validMoves(position);
+
+            Set<ChessPosition> highlightedMoves = new HashSet<>();
+            for (chess.ChessMove move : moves) {
+                highlightedMoves.add(move.getEndPosition());
+            }
+
+            Board.setHighlightedSquares(highlightedMoves);
+            Board.drawBoard(isWhitePlayer);
+
             return "Highlighted moves for " + params[0];
         }
         throw new DataAccessException("Expected: highlight <position>");
@@ -424,11 +453,11 @@ public class ChessClient implements NotificationHandler {
     }
 
     private void handleNotification(ServerMessage msg) {
-        Notification notification = new Notification(Notification.Type.GAME_UPDATE, msg.getMessage());
+        Notification notification = new Notification(Notification.Type.GAME_UPDATE, msg.getErrorMessage());
         notify(notification);
     }
 
     private void handleError(ServerMessage msg) {
-        System.out.println(SET_TEXT_COLOR_RED + "Error: " + msg.getMessage() + RESET_TEXT_COLOR);
+        System.out.println(SET_TEXT_COLOR_RED + "Error: " + msg.getErrorMessage() + RESET_TEXT_COLOR);
     }
 }

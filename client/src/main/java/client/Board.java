@@ -3,6 +3,9 @@ package client;
 import chess.ChessGame;
 import chess.ChessPosition;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static ui.EscapeSequences.*;
 
 public class Board {
@@ -11,6 +14,7 @@ public class Board {
     public static void updateFromChessGame(ChessGame game) {
         currentGame = game;
     }
+    private static Set<ChessPosition> highlightedSquares = new HashSet<>();
 
     public static void drawBoard(boolean isWhite) {
         if (currentGame == null) {
@@ -18,6 +22,14 @@ public class Board {
         } else {
             drawUpdatedBoard(isWhite);
         }
+    }
+
+    public static ChessGame getCurrentGame() {
+        return currentGame;
+    }
+
+    public static void setHighlightedSquares(Set<ChessPosition> squares) {
+        highlightedSquares = squares;
     }
 
     private static void drawUpdatedBoard(boolean isWhite) {
@@ -42,7 +54,12 @@ public class Board {
             System.out.print(SET_BG_COLOR_LIGHT_GREY + " " + row + " " + RESET_BG_COLOR);
 
             for (int col = 0; col < 8; col++) {
-                if (whiteSquare) {
+                ChessPosition pos = new ChessPosition(row, col + 1);
+                boolean isHighlighted = highlightedSquares.contains(pos);
+
+                if (isHighlighted) {
+                    System.out.print(SET_BG_COLOR_YELLOW);
+                } else if (whiteSquare) {
                     System.out.print(SET_BG_COLOR_WHITE);
                 } else {
                     System.out.print(SET_BG_COLOR_DARK_GREEN);
