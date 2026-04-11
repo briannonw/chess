@@ -5,7 +5,7 @@ import chess.ChessPosition;
 import dataaccess.DataAccessException;
 import model.ListGamesData;
 import service.ListGamesResult;
-import webSocketMessages.Notification;
+import websocket.messages.Notification;
 import websocket.commands.UserGameCommand;
 import websocket.messages.ServerMessage;
 import com.google.gson.Gson;

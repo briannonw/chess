@@ -210,8 +210,7 @@ public class WebSocketHandler {
         roles.remove(ctx);
     }
 
-    private void handleMove(WsContext ctx, UserGameCommand command, String rawJson)
-            throws DataAccessException {
+    private void handleMove(WsContext ctx, UserGameCommand command, String rawJson) throws DataAccessException {
 
         int gameID = command.getGameID();
 
@@ -220,7 +219,6 @@ public class WebSocketHandler {
             sendError(ctx, "Invalid game ID");
             return;
         }
-        ChessGame game = gameData.game();
 
         if (finishedGames.contains(gameID)) {
             sendError(ctx, "Game is over");
@@ -241,117 +239,111 @@ public class WebSocketHandler {
         }
 
         try {
-            JsonObject json = JsonParser.parseString(rawJson).getAsJsonObject();
-            JsonObject moveObj = json.getAsJsonObject("move");
-
-            JsonObject start = moveObj.getAsJsonObject("startPosition");
-            JsonObject end = moveObj.getAsJsonObject("endPosition");
-
-            int startRow = start.get("row").getAsInt();
-            int startCol = start.get("col").getAsInt();
-            int endRow = end.get("row").getAsInt();
-            int endCol = end.get("col").getAsInt();
-
-            ChessPosition startPos = new ChessPosition(startRow, startCol);
-            ChessPosition endPos = new ChessPosition(endRow, endCol);
-
-            ChessMove move = new ChessMove(startPos, endPos, null);
-
-            ChessGame.TeamColor opponent;
-            if (game.getTeamTurn() == ChessGame.TeamColor.WHITE) {
-                opponent = ChessGame.TeamColor.BLACK;
-            } else {
-                opponent = ChessGame.TeamColor.WHITE;
-            }
-
-            ChessGame.TeamColor userColor;
-            if (username.equals(gameData.whiteUsername())) {
-                userColor = ChessGame.TeamColor.WHITE;
-
-            } else {
-                userColor = ChessGame.TeamColor.BLACK;
-            }
-
-            ChessPiece piece = game.getBoard().getPiece(startPos);
-
-            if (piece == null) {
-                sendError(ctx, "No piece selected");
-                return;
-            } else if (piece.getTeamColor() != userColor) {
-                sendError(ctx, "Cannot move opponent's piece");
-                return;
-            }
-
-            if (game.getTeamTurn() != userColor) {
-                sendError(ctx, "Not " + userColor.toString().toLowerCase() + "'s turn");
-                return;
-            }
-
-            game.makeMove(move);
-
-            GameData updated = new GameData(
-                    gameData.gameID(),
-                    gameData.whiteUsername(),
-                    gameData.blackUsername(),
-                    gameData.gameName(),
-                    game
-            );
-            dataAccess.updateGame(updated);
-
-            ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
-            response.setGame(game);
-            send(ctx, response);
-            broadcast(gameID, ctx, response);
-
-            String startString = toChessFormat(startRow, startCol);
-            String endString = toChessFormat(endRow, endCol);
-
-            broadcastNotification(gameID, ctx, username + " moved a piece from " + startString + " to " + endString);
-
-            if (game.isInCheckmate(opponent) || game.isInStalemate(opponent)) {
-
-                finishedGames.add(gameID);
-
-                String msg;
-
-                if (game.isInCheckmate(opponent)) {
-                    msg = "Checkmate! " + username + " won.";
-                } else {
-                    msg = "Stalemate! Draw game.";
-                }
-
-                ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
-                notification.setMessage(msg);
-                send(ctx, notification);
-
-                broadcastNotification(gameID, ctx, msg);
-                return;
-            }
-
-            if (game.isInCheck(opponent)) {
-                String opponentUsername;
-                if (opponent == ChessGame.TeamColor.BLACK) {
-                    opponentUsername = gameData.blackUsername();
-                } else {
-                    opponentUsername = gameData.whiteUsername();
-                }
-                String msg = opponentUsername + " is in check.";
-
-                ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
-                notification.setMessage(msg);
-                send(ctx, notification);
-
-                broadcastNotification(gameID, ctx, msg);
-            }
-
+            completeMove(ctx, rawJson, username, gameData, gameID);
         } catch (InvalidMoveException e) {
             sendError(ctx, "Invalid move");
-
         } catch (DataAccessException e) {
             sendError(ctx, "Server error");
-
         } catch (Exception e) {
             sendError(ctx, "Invalid request");
+        }
+    }
+
+    private void completeMove(WsContext ctx, String rawJson, String username, GameData gameData, int gameID)
+            throws DataAccessException, InvalidMoveException {
+        JsonObject json = JsonParser.parseString(rawJson).getAsJsonObject();
+        JsonObject moveObj = json.getAsJsonObject("move");
+        JsonObject start = moveObj.getAsJsonObject("startPosition");
+        JsonObject end = moveObj.getAsJsonObject("endPosition");
+
+        int startRow = start.get("row").getAsInt();
+        int startCol = start.get("col").getAsInt();
+        int endRow = end.get("row").getAsInt();
+        int endCol = end.get("col").getAsInt();
+
+        ChessPosition startPos = new ChessPosition(startRow, startCol);
+        ChessPosition endPos = new ChessPosition(endRow, endCol);
+        ChessMove move = new ChessMove(startPos, endPos, null);
+        ChessGame game = gameData.game();
+
+        ChessGame.TeamColor opponent;
+        if (game.getTeamTurn() == ChessGame.TeamColor.WHITE) {
+            opponent = ChessGame.TeamColor.BLACK;
+        } else {
+            opponent = ChessGame.TeamColor.WHITE;
+        }
+        ChessGame.TeamColor userColor;
+        if (username.equals(gameData.whiteUsername())) {
+            userColor = ChessGame.TeamColor.WHITE;
+        } else {
+            userColor = ChessGame.TeamColor.BLACK;
+        }
+
+        ChessPiece piece = game.getBoard().getPiece(startPos);
+        if (piece == null) {
+            sendError(ctx, "No piece selected");
+            return;
+        } else if (piece.getTeamColor() != userColor) {
+            sendError(ctx, "Cannot move opponent's piece");
+            return;
+        }
+
+        if (game.getTeamTurn() != userColor) {
+            sendError(ctx, "Not " + userColor.toString().toLowerCase() + "'s turn");
+            return;
+        }
+
+        game.makeMove(move);
+        GameData updated = new GameData(
+                gameData.gameID(),
+                gameData.whiteUsername(),
+                gameData.blackUsername(),
+                gameData.gameName(),
+                game
+        );
+        dataAccess.updateGame(updated);
+
+        ServerMessage response = new ServerMessage(ServerMessageType.LOAD_GAME);
+        response.setGame(game);
+        send(ctx, response);
+        broadcast(gameID, ctx, response);
+
+        String startString = toChessFormat(startRow, startCol);
+        String endString = toChessFormat(endRow, endCol);
+        broadcastNotification(gameID, ctx, username + " moved a piece from " + startString + " to " + endString);
+
+        if (game.isInCheckmate(opponent) || game.isInStalemate(opponent)) {
+            finishedGames.add(gameID);
+            String msg;
+
+            if (game.isInCheckmate(opponent)) {
+                msg = "Checkmate! " + username + " won.";
+            } else {
+                msg = "Stalemate! Draw game.";
+            }
+
+            ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
+            notification.setMessage(msg);
+            send(ctx, notification);
+
+            broadcastNotification(gameID, ctx, msg);
+            return;
+        }
+
+        if (game.isInCheck(opponent)) {
+            String opponentUsername;
+            if (opponent == ChessGame.TeamColor.BLACK) {
+                opponentUsername = gameData.blackUsername();
+            } else {
+                opponentUsername = gameData.whiteUsername();
+            }
+            String msg = opponentUsername + " is in check.";
+
+            ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
+            notification.setMessage(msg);
+            send(ctx, notification);
+
+            broadcastNotification(gameID, ctx, msg);
         }
     }
 

@@ -26,7 +26,9 @@ public class Board {
     }
 
     private static ChessPosition displayPosition(ChessPosition pos, boolean isWhite) {
-        if (isWhite) return pos;
+        if (isWhite) {
+            return pos;
+        }
 
         return new ChessPosition(pos.getRow(), 9 - pos.getColumn());
     }
