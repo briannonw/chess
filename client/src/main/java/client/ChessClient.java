@@ -340,7 +340,7 @@ public class ChessClient implements NotificationHandler {
             case 'f' -> 6;
             case 'g' -> 7;
             case 'h' -> 8;
-            default -> throw new DataAccessException("Invalid column");
+            default -> throw new DataAccessException("Error: Invalid column");
         };
     }
 
