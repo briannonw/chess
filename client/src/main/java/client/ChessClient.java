@@ -249,6 +249,7 @@ public class ChessClient implements NotificationHandler {
             isObserver = false;
 
             ws = new WebSocketFacade("http://localhost:8080", this);
+            Board.clearHighlightedSquares();
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,
@@ -286,6 +287,7 @@ public class ChessClient implements NotificationHandler {
             isWhitePlayer = true;
             isObserver = true;
             ws = new WebSocketFacade("http://localhost:8080", this);
+            Board.clearHighlightedSquares();
 
             UserGameCommand command = new UserGameCommand(
                     UserGameCommand.CommandType.CONNECT,

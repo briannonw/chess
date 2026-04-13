@@ -305,12 +305,19 @@ public class WebSocketHandler {
         String endString = toChessFormat(endRow, endCol);
         broadcastNotification(gameID, ctx, username + " moved a piece from " + startString + " to " + endString);
 
+        String opponentUsername;
+        if (opponent == ChessGame.TeamColor.BLACK) {
+            opponentUsername = gameData.blackUsername();
+        } else {
+            opponentUsername = gameData.whiteUsername();
+        }
+
         if (game.isInCheckmate(opponent) || game.isInStalemate(opponent)) {
             finishedGames.add(gameID);
             String msg;
 
             if (game.isInCheckmate(opponent)) {
-                msg = "Checkmate! " + username + " won.";
+                msg = opponentUsername + " is in checkmate. " + username + " won.";
             } else {
                 msg = "Stalemate! Draw game.";
             }
@@ -324,12 +331,6 @@ public class WebSocketHandler {
         }
 
         if (game.isInCheck(opponent)) {
-            String opponentUsername;
-            if (opponent == ChessGame.TeamColor.BLACK) {
-                opponentUsername = gameData.blackUsername();
-            } else {
-                opponentUsername = gameData.whiteUsername();
-            }
             String msg = opponentUsername + " is in check.";
 
             ServerMessage notification = new ServerMessage(ServerMessageType.NOTIFICATION);
